@@ -2,98 +2,104 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
-/* BarberFlow Design System - Urban Premium Dark Theme with Gold Accents */
+/* BarberFlow Design System - Duolingo-Inspired Bright & Friendly Theme */
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 210 20% 98%;
+    --foreground: 220 20% 20%;
 
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 20%;
 
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 20%;
 
-    --primary: 43 96% 56%;
-    --primary-foreground: 240 10% 3.9%;
+    --primary: 145 65% 42%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 5% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 220 20% 30%;
 
-    --muted: 240 5% 15%;
-    --muted-foreground: 240 5% 55%;
+    --muted: 210 15% 92%;
+    --muted-foreground: 220 10% 50%;
 
-    --accent: 43 96% 56%;
-    --accent-foreground: 240 10% 3.9%;
+    --accent: 35 100% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
+    --success: 145 65% 42%;
+    --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 240 10% 3.9%;
+    --warning: 35 100% 55%;
+    --warning-foreground: 220 20% 20%;
 
-    --border: 240 5% 17%;
-    --input: 240 5% 17%;
-    --ring: 43 96% 56%;
+    --info: 200 90% 50%;
+    --info-foreground: 0 0% 100%;
 
-    --radius: 0.75rem;
+    --purple: 270 70% 60%;
+    --purple-foreground: 0 0% 100%;
 
-    --sidebar-background: 240 10% 5%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 43 96% 56%;
-    --sidebar-primary-foreground: 240 10% 3.9%;
-    --sidebar-accent: 240 5% 12%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 5% 17%;
-    --sidebar-ring: 43 96% 56%;
+    --pink: 330 80% 60%;
+    --pink-foreground: 0 0% 100%;
 
-    --gradient-gold: linear-gradient(135deg, hsl(43 96% 56%) 0%, hsl(38 92% 50%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(240 10% 6%) 0%, hsl(240 10% 3.9%) 100%);
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 145 65% 42%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 145 65% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 220 20% 20%;
+    --sidebar-border: 210 20% 90%;
+    --sidebar-ring: 145 65% 42%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 220 20% 14%;
+    --foreground: 210 20% 98%;
 
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
+    --card: 220 20% 18%;
+    --card-foreground: 210 20% 98%;
 
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 220 20% 18%;
+    --popover-foreground: 210 20% 98%;
 
-    --primary: 43 96% 56%;
-    --primary-foreground: 240 10% 3.9%;
+    --primary: 145 65% 50%;
+    --primary-foreground: 220 20% 10%;
 
-    --secondary: 240 5% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 220 15% 22%;
+    --secondary-foreground: 210 20% 90%;
 
-    --muted: 240 5% 15%;
-    --muted-foreground: 240 5% 55%;
+    --muted: 220 15% 25%;
+    --muted-foreground: 210 15% 60%;
 
-    --accent: 43 96% 56%;
-    --accent-foreground: 240 10% 3.9%;
+    --accent: 35 100% 55%;
+    --accent-foreground: 220 20% 10%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 240 5% 17%;
-    --input: 240 5% 17%;
-    --ring: 43 96% 56%;
+    --border: 220 15% 25%;
+    --input: 220 15% 25%;
+    --ring: 145 65% 50%;
 
-    --sidebar-background: 240 10% 5%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 43 96% 56%;
-    --sidebar-primary-foreground: 240 10% 3.9%;
-    --sidebar-accent: 240 5% 12%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 5% 17%;
-    --sidebar-ring: 43 96% 56%;
+    --sidebar-background: 220 20% 16%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 145 65% 50%;
+    --sidebar-primary-foreground: 220 20% 10%;
+    --sidebar-accent: 220 15% 22%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 220 15% 25%;
+    --sidebar-ring: 145 65% 50%;
   }
 }
 
@@ -103,37 +109,72 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Nunito', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Bebas Neue', sans-serif;
-    letter-spacing: 0.05em;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+  }
+}
+
+@layer components {
+  .duo-card {
+    @apply bg-card rounded-2xl border-2 border-border shadow-[0_4px_0_0_hsl(var(--border))] transition-all duration-150;
+  }
+
+  .duo-card:hover {
+    @apply shadow-[0_6px_0_0_hsl(var(--border))] -translate-y-0.5;
+  }
+
+  .duo-card:active {
+    @apply shadow-[0_2px_0_0_hsl(var(--border))] translate-y-0.5;
+  }
+
+  .duo-button {
+    @apply font-bold rounded-2xl border-b-4 transition-all duration-150 active:border-b-2 active:translate-y-0.5;
+  }
+
+  .duo-button-primary {
+    @apply bg-primary text-primary-foreground border-b-[hsl(145_65%_32%)] hover:bg-[hsl(145_65%_38%)];
+  }
+
+  .duo-button-accent {
+    @apply bg-accent text-accent-foreground border-b-[hsl(35_100%_40%)] hover:bg-[hsl(35_100%_50%)];
+  }
+
+  .duo-button-secondary {
+    @apply bg-secondary text-secondary-foreground border-b-[hsl(210_20%_82%)] hover:bg-[hsl(210_20%_92%)];
+  }
+
+  .duo-button-destructive {
+    @apply bg-destructive text-destructive-foreground border-b-[hsl(0_72%_40%)] hover:bg-[hsl(0_72%_50%)];
+  }
+
+  .duo-badge {
+    @apply px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide;
+  }
+
+  .duo-input {
+    @apply rounded-2xl border-2 border-border bg-card px-4 py-3 font-semibold transition-all focus:border-primary focus:ring-2 focus:ring-primary/20;
+  }
+
+  .role-cashier {
+    --role-color: 145 65% 42%;
+  }
+
+  .role-barber {
+    --role-color: 270 70% 60%;
   }
 }
 
 @layer utilities {
-  .text-gradient-gold {
-    background: linear-gradient(135deg, hsl(43 96% 56%) 0%, hsl(38 92% 50%) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+  .text-balance {
+    text-wrap: balance;
   }
 
-  .bg-gradient-gold {
-    background: linear-gradient(135deg, hsl(43 96% 56%) 0%, hsl(38 92% 50%) 100%);
-  }
-
-  .bg-gradient-dark {
-    background: linear-gradient(180deg, hsl(240 10% 6%) 0%, hsl(240 10% 3.9%) 100%);
-  }
-
-  .glass-card {
-    @apply bg-card/80 backdrop-blur-lg border border-border/50;
-  }
-
-  .glow-gold {
-    box-shadow: 0 0 20px hsl(43 96% 56% / 0.3);
+  .bounce-tap {
+    @apply transition-transform active:scale-95;
   }
 }

@@ -1,54 +1,54 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { LayoutDashboard, Calendar, Users, Scissors } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useRole } from "@/contexts/RoleContext";
+import useSound from "@/hooks/useSound";
 
-const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/appointments", icon: Calendar, label: "Appointments" },
+const cashierNav = [
+  { path: "/", icon: LayoutDashboard, label: "Home" },
+  { path: "/appointments", icon: Calendar, label: "Book" },
   { path: "/clients", icon: Users, label: "Clients" },
   { path: "/services", icon: Scissors, label: "Services" },
 ];
 
+const barberNav = [
+  { path: "/", icon: LayoutDashboard, label: "Station" },
+  { path: "/queue", icon: Calendar, label: "Queue" },
+];
+
 export default function BottomNav() {
   const location = useLocation();
+  const { role } = useRole();
+  const { playSound } = useSound();
+  
+  const navItems = role === 'barber' ? barberNav : cashierNav;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
-      <div className="max-w-lg mx-auto flex justify-around items-center py-2">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t-2 border-border z-50 safe-area-pb">
+      <div className="max-w-lg mx-auto flex justify-around items-center py-3 px-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              className={cn(
-                "relative flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors duration-200",
-                isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
+              onClick={() => playSound('tap')}
+              className="relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-colors"
             >
               <motion.div
+                className={`p-2 rounded-2xl transition-colors ${
+                  isActive 
+                    ? role === 'barber' ? 'bg-purple text-purple-foreground' : 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground'
+                }`}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
-                <item.icon
-                  className={cn(
-                    "w-5 h-5",
-                    isActive && "drop-shadow-[0_0_8px_hsl(43_96%_56%/0.5)]"
-                  )}
-                />
+                <item.icon className="w-5 h-5" />
               </motion.div>
-              <span className="text-xs font-medium">{item.label}</span>
-              {isActive && (
-                <motion.div 
-                  className="absolute -bottom-2 w-12 h-0.5 bg-gradient-gold rounded-full"
-                  layoutId="activeTab"
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
+              <span className={`text-xs font-bold ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                {item.label}
+              </span>
             </NavLink>
           );
         })}
