@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import { LayoutDashboard, Calendar, Users, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,21 +23,31 @@ export default function BottomNav() {
               key={item.path}
               to={item.path}
               className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-all duration-200",
+                "relative flex flex-col items-center gap-1 px-4 py-2 rounded-lg transition-colors duration-200",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon
-                className={cn(
-                  "w-5 h-5 transition-transform",
-                  isActive && "scale-110"
-                )}
-              />
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              >
+                <item.icon
+                  className={cn(
+                    "w-5 h-5",
+                    isActive && "drop-shadow-[0_0_8px_hsl(43_96%_56%/0.5)]"
+                  )}
+                />
+              </motion.div>
               <span className="text-xs font-medium">{item.label}</span>
               {isActive && (
-                <div className="absolute bottom-0 w-12 h-0.5 bg-gradient-gold rounded-full" />
+                <motion.div 
+                  className="absolute -bottom-2 w-12 h-0.5 bg-gradient-gold rounded-full"
+                  layoutId="activeTab"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
               )}
             </NavLink>
           );
