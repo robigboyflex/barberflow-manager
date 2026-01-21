@@ -3,31 +3,44 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import Appointments from "./pages/Appointments";
-import Clients from "./pages/Clients";
-import Services from "./pages/Services";
-import NotFound from "./pages/NotFound";
+import { RoleProvider, useRole } from "./contexts/RoleContext";
 import Layout from "./components/Layout";
+import CashierDashboard from "./pages/CashierDashboard";
+import CashierAppointments from "./pages/CashierAppointments";
+import CashierClients from "./pages/CashierClients";
+import CashierServices from "./pages/CashierServices";
+import BarberDashboard from "./pages/BarberDashboard";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function AppRoutes() {
+  const { role } = useRole();
+
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={role === 'barber' ? <BarberDashboard /> : <CashierDashboard />} />
+        <Route path="appointments" element={<CashierAppointments />} />
+        <Route path="clients" element={<CashierClients />} />
+        <Route path="services" element={<CashierServices />} />
+        <Route path="queue" element={<BarberDashboard />} />
+      </Route>
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="appointments" element={<Appointments />} />
-            <Route path="clients" element={<Clients />} />
-            <Route path="services" element={<Services />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <RoleProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </RoleProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
