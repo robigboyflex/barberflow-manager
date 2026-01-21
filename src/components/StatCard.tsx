@@ -1,6 +1,8 @@
+import { motion } from "framer-motion";
 import { Calendar, DollarSign, Users, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { fadeUpItem, cardHover, cardTap } from "./AnimatedPage";
 
 interface StatCardProps {
   title: string;
@@ -28,31 +30,48 @@ export default function StatCard({ title, value, subtitle, icon, trend }: StatCa
   const Icon = iconMap[icon];
 
   return (
-    <Card className="glass-card overflow-hidden animate-fade-in">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">{title}</p>
-            <p className="text-2xl font-display tracking-wide">{value}</p>
-            {subtitle && (
-              <p className="text-xs text-muted-foreground">{subtitle}</p>
-            )}
-            {trend && (
-              <p
-                className={cn(
-                  "text-xs font-medium",
-                  trend.isPositive ? "text-success" : "text-destructive"
-                )}
+    <motion.div
+      variants={fadeUpItem}
+      whileHover={cardHover}
+      whileTap={cardTap}
+    >
+      <Card className="glass-card overflow-hidden h-full">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">{title}</p>
+              <motion.p 
+                className="text-2xl font-display tracking-wide"
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
               >
-                {trend.isPositive ? "+" : ""}{trend.value}% vs last week
-              </p>
-            )}
+                {value}
+              </motion.p>
+              {subtitle && (
+                <p className="text-xs text-muted-foreground">{subtitle}</p>
+              )}
+              {trend && (
+                <p
+                  className={cn(
+                    "text-xs font-medium",
+                    trend.isPositive ? "text-success" : "text-destructive"
+                  )}
+                >
+                  {trend.isPositive ? "+" : ""}{trend.value}% vs last week
+                </p>
+              )}
+            </div>
+            <motion.div 
+              className={cn("p-2 rounded-lg bg-secondary", colorMap[icon])}
+              whileHover={{ rotate: 10, scale: 1.1 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Icon className="w-5 h-5" />
+            </motion.div>
           </div>
-          <div className={cn("p-2 rounded-lg bg-secondary", colorMap[icon])}>
-            <Icon className="w-5 h-5" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
