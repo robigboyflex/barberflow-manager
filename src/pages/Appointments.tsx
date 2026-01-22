@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, Calendar as CalendarIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AppointmentCard from "@/components/AppointmentCard";
 import AnimatedPage, { staggerContainer } from "@/components/AnimatedPage";
 import type { AppointmentStatus } from "@/types/barberflow";
@@ -66,18 +64,20 @@ const mockAppointments = [
   },
 ];
 
+const tabs = ["All", "Upcoming", "Completed"];
+
 export default function Appointments() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("All");
 
   const filteredAppointments = mockAppointments.filter((apt) => {
     const matchesSearch =
       apt.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       apt.serviceName.toLowerCase().includes(searchQuery.toLowerCase());
     
-    if (activeTab === "all") return matchesSearch;
-    if (activeTab === "upcoming") return matchesSearch && ["scheduled", "confirmed"].includes(apt.status);
-    if (activeTab === "completed") return matchesSearch && apt.status === "completed";
+    if (activeTab === "All") return matchesSearch;
+    if (activeTab === "Upcoming") return matchesSearch && ["scheduled", "confirmed"].includes(apt.status);
+    if (activeTab === "Completed") return matchesSearch && apt.status === "completed";
     return matchesSearch;
   });
 
@@ -87,33 +87,35 @@ export default function Appointments() {
         {/* Header */}
         <motion.div 
           className="flex items-center justify-between"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="font-display text-2xl tracking-wide text-gradient-gold">
-            APPOINTMENTS
-          </h1>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-90">
-              <Plus className="w-4 h-4 mr-1" />
-              New
-            </Button>
-          </motion.div>
+          <h1 className="font-display text-2xl tracking-wide">Bookings</h1>
+          <motion.button
+            className="w-11 h-11 rounded-2xl bg-gradient-gold flex items-center justify-center shadow-lg shadow-primary/20"
+            whileTap={{ scale: 0.9 }}
+          >
+            <Plus className="w-5 h-5 text-primary-foreground" />
+          </motion.button>
         </motion.div>
 
         {/* Date Selector */}
         <motion.div
+          className="flex items-center justify-between mobile-card"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Button
-            variant="outline"
-            className="w-full justify-start text-left font-normal border-border"
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            Today, January 21, 2026
-          </Button>
+          <motion.button whileTap={{ scale: 0.9 }} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+            <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+          </motion.button>
+          <div className="text-center">
+            <p className="font-semibold">Today</p>
+            <p className="text-sm text-muted-foreground">January 22, 2026</p>
+          </div>
+          <motion.button whileTap={{ scale: 0.9 }} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </motion.button>
         </motion.div>
 
         {/* Search */}
@@ -123,60 +125,68 @@ export default function Appointments() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Search appointments..."
+            placeholder="Search bookings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-secondary border-border"
+            className="pl-12 h-12 rounded-2xl bg-secondary border-0 text-base"
           />
         </motion.div>
 
         {/* Tabs */}
         <motion.div
+          className="flex gap-2"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full bg-secondary">
-              <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
-              <TabsTrigger value="upcoming" className="flex-1">Upcoming</TabsTrigger>
-              <TabsTrigger value="completed" className="flex-1">Completed</TabsTrigger>
-            </TabsList>
+          {tabs.map((tab) => (
+            <motion.button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`flex-1 py-3 rounded-2xl font-semibold text-sm transition-colors ${
+                activeTab === tab
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground"
+              }`}
+              whileTap={{ scale: 0.97 }}
+            >
+              {tab}
+            </motion.button>
+          ))}
+        </motion.div>
 
-            <TabsContent value={activeTab} className="mt-4">
-              <motion.div 
-                className="space-y-3"
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-                key={activeTab}
-              >
-                {filteredAppointments.length === 0 ? (
-                  <motion.div 
-                    className="text-center py-8 text-muted-foreground"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <p>No appointments found</p>
-                  </motion.div>
-                ) : (
-                  filteredAppointments.map((appointment) => (
-                    <AppointmentCard
-                      key={appointment.id}
-                      clientName={appointment.clientName}
-                      serviceName={appointment.serviceName}
-                      time={appointment.time}
-                      duration={appointment.duration}
-                      status={appointment.status}
-                      barberName={appointment.barberName}
-                    />
-                  ))
-                )}
-              </motion.div>
-            </TabsContent>
-          </Tabs>
+        {/* Appointments List */}
+        <motion.div 
+          className="space-y-3"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+          key={activeTab}
+        >
+          {filteredAppointments.length === 0 ? (
+            <motion.div 
+              className="text-center py-12 text-muted-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <p className="text-lg font-medium">No bookings found</p>
+              <p className="text-sm">Try adjusting your search</p>
+            </motion.div>
+          ) : (
+            filteredAppointments.map((appointment) => (
+              <AppointmentCard
+                key={appointment.id}
+                clientName={appointment.clientName}
+                serviceName={appointment.serviceName}
+                time={appointment.time}
+                duration={appointment.duration}
+                status={appointment.status}
+                barberName={appointment.barberName}
+              />
+            ))
+          )}
         </motion.div>
       </div>
     </AnimatedPage>
