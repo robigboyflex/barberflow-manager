@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ClientCard from "@/components/ClientCard";
-import AnimatedPage, { staggerContainer, fadeUpItem } from "@/components/AnimatedPage";
+import AnimatedPage, { staggerContainer } from "@/components/AnimatedPage";
 
 // Mock data for demo
 const mockClients = [
@@ -74,18 +73,19 @@ export default function Clients() {
         {/* Header */}
         <motion.div 
           className="flex items-center justify-between"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="font-display text-2xl tracking-wide text-gradient-gold">
-            CLIENTS
-          </h1>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-90">
-              <Plus className="w-4 h-4 mr-1" />
-              Add
-            </Button>
-          </motion.div>
+          <div>
+            <h1 className="font-display text-2xl tracking-wide">Clients</h1>
+            <p className="text-sm text-muted-foreground">{filteredClients.length} total</p>
+          </div>
+          <motion.button
+            className="w-11 h-11 rounded-2xl bg-gradient-gold flex items-center justify-center shadow-lg shadow-primary/20"
+            whileTap={{ scale: 0.9 }}
+          >
+            <Plus className="w-5 h-5 text-primary-foreground" />
+          </motion.button>
         </motion.div>
 
         {/* Search */}
@@ -95,24 +95,14 @@ export default function Clients() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Search by name, phone, or email..."
+            placeholder="Search clients..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-secondary border-border"
+            className="pl-12 h-12 rounded-2xl bg-secondary border-0 text-base"
           />
         </motion.div>
-
-        {/* Client Count */}
-        <motion.p 
-          className="text-sm text-muted-foreground"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.15 }}
-        >
-          {filteredClients.length} client{filteredClients.length !== 1 ? "s" : ""}
-        </motion.p>
 
         {/* Client List */}
         <motion.div 
@@ -123,23 +113,23 @@ export default function Clients() {
         >
           {filteredClients.length === 0 ? (
             <motion.div 
-              className="text-center py-8 text-muted-foreground"
+              className="text-center py-12 text-muted-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <p>No clients found</p>
+              <p className="text-lg font-medium">No clients found</p>
+              <p className="text-sm">Try adjusting your search</p>
             </motion.div>
           ) : (
             filteredClients.map((client) => (
-              <motion.div key={client.id} variants={fadeUpItem}>
-                <ClientCard
-                  name={client.name}
-                  phone={client.phone}
-                  email={client.email}
-                  lastVisit={client.lastVisit}
-                  totalVisits={client.totalVisits}
-                />
-              </motion.div>
+              <ClientCard
+                key={client.id}
+                name={client.name}
+                phone={client.phone}
+                email={client.email}
+                lastVisit={client.lastVisit}
+                totalVisits={client.totalVisits}
+              />
             ))
           )}
         </motion.div>

@@ -9,7 +9,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="flex-1 pb-20 px-4 pt-4 max-w-lg mx-auto w-full overflow-hidden">
+      <main className="flex-1 pb-24 px-4 pt-2 w-full overflow-x-hidden overflow-y-auto">
         <AnimatePresence mode="wait">
           <Outlet key={location.pathname} />
         </AnimatePresence>

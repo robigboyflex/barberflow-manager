@@ -1,13 +1,7 @@
-import { Phone, Mail, MoreVertical } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { Phone, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { fadeUpItem, cardTap } from "./AnimatedPage";
 
 interface ClientCardProps {
   name: string;
@@ -23,12 +17,9 @@ interface ClientCardProps {
 export default function ClientCard({
   name,
   phone,
-  email,
   lastVisit,
   totalVisits,
   onClick,
-  onEdit,
-  onDelete,
 }: ClientCardProps) {
   const initials = name
     .split(" ")
@@ -38,50 +29,35 @@ export default function ClientCard({
     .slice(0, 2);
 
   return (
-    <Card className="glass-card overflow-hidden animate-fade-in">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="w-12 h-12 bg-gradient-gold">
-            <AvatarFallback className="bg-gradient-gold text-primary-foreground font-display text-lg">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0" onClick={onClick}>
-            <p className="font-medium text-foreground truncate">{name}</p>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-              <Phone className="w-3 h-3" />
-              <span>{phone}</span>
-            </div>
-            {email && (
-              <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Mail className="w-3 h-3" />
-                <span className="truncate">{email}</span>
-              </div>
-            )}
+    <motion.div
+      variants={fadeUpItem}
+      whileTap={cardTap}
+      className="mobile-card"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-4">
+        <Avatar className="w-14 h-14 rounded-2xl">
+          <AvatarFallback className="rounded-2xl bg-gradient-gold text-primary-foreground font-display text-lg">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-foreground mb-0.5">{name}</p>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-1">
+            <Phone className="w-3.5 h-3.5" />
+            <span>{phone}</span>
           </div>
-          <div className="text-right space-y-1">
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             {totalVisits !== undefined && (
-              <p className="text-sm text-muted-foreground">{totalVisits} visits</p>
+              <span className="font-semibold">{totalVisits} visits</span>
             )}
             {lastVisit && (
-              <p className="text-xs text-muted-foreground">Last: {lastVisit}</p>
+              <span>Last: {lastVisit}</span>
             )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="shrink-0">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
-              <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
-      </CardContent>
-    </Card>
+        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+      </div>
+    </motion.div>
   );
 }

@@ -1,8 +1,7 @@
 import { motion } from "framer-motion";
-import { Calendar, DollarSign, Users, CheckCircle } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Calendar, DollarSign, Users, CheckCircle, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { fadeUpItem, cardHover, cardTap } from "./AnimatedPage";
+import { fadeUpItem, cardTap } from "./AnimatedPage";
 
 interface StatCardProps {
   title: string;
@@ -12,66 +11,55 @@ interface StatCardProps {
   trend?: { value: number; isPositive: boolean };
 }
 
-const iconMap = {
-  calendar: Calendar,
-  revenue: DollarSign,
-  clients: Users,
-  completed: CheckCircle,
-};
-
-const colorMap = {
-  calendar: "text-primary",
-  revenue: "text-success",
-  clients: "text-accent",
-  completed: "text-primary",
+const iconConfig: Record<string, { Icon: LucideIcon; gradient: string }> = {
+  calendar: { Icon: Calendar, gradient: "from-primary to-warning" },
+  revenue: { Icon: DollarSign, gradient: "from-success to-emerald-400" },
+  clients: { Icon: Users, gradient: "from-accent to-orange-400" },
+  completed: { Icon: CheckCircle, gradient: "from-primary to-amber-500" },
 };
 
 export default function StatCard({ title, value, subtitle, icon, trend }: StatCardProps) {
-  const Icon = iconMap[icon];
+  const { Icon, gradient } = iconConfig[icon];
 
   return (
     <motion.div
       variants={fadeUpItem}
-      whileHover={cardHover}
       whileTap={cardTap}
+      className="mobile-card"
     >
-      <Card className="glass-card overflow-hidden h-full">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">{title}</p>
-              <motion.p 
-                className="text-2xl font-display tracking-wide"
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              >
-                {value}
-              </motion.p>
-              {subtitle && (
-                <p className="text-xs text-muted-foreground">{subtitle}</p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-1 flex-1">
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">{title}</p>
+          <motion.p 
+            className="text-3xl font-display tracking-wide"
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+          >
+            {value}
+          </motion.p>
+          {subtitle && (
+            <p className="text-[11px] text-muted-foreground font-medium">{subtitle}</p>
+          )}
+          {trend && (
+            <p
+              className={cn(
+                "text-[11px] font-bold",
+                trend.isPositive ? "text-success" : "text-destructive"
               )}
-              {trend && (
-                <p
-                  className={cn(
-                    "text-xs font-medium",
-                    trend.isPositive ? "text-success" : "text-destructive"
-                  )}
-                >
-                  {trend.isPositive ? "+" : ""}{trend.value}% vs last week
-                </p>
-              )}
-            </div>
-            <motion.div 
-              className={cn("p-2 rounded-lg bg-secondary", colorMap[icon])}
-              whileHover={{ rotate: 10, scale: 1.1 }}
-              transition={{ type: "spring", stiffness: 300 }}
             >
-              <Icon className="w-5 h-5" />
-            </motion.div>
-          </div>
-        </CardContent>
-      </Card>
+              {trend.isPositive ? "↑" : "↓"} {Math.abs(trend.value)}%
+            </p>
+          )}
+        </div>
+        <motion.div 
+          className={cn("w-12 h-12 rounded-2xl bg-gradient-to-br flex items-center justify-center shadow-lg", gradient)}
+          whileTap={{ rotate: 10, scale: 0.9 }}
+          transition={{ type: "spring", stiffness: 300 }}
+        >
+          <Icon className="w-6 h-6 text-primary-foreground" />
+        </motion.div>
+      </div>
     </motion.div>
   );
 }

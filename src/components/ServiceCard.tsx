@@ -1,14 +1,8 @@
-import { Clock, DollarSign, MoreVertical } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { Clock, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { fadeUpItem, cardTap } from "./AnimatedPage";
 
 interface ServiceCardProps {
   name: string;
@@ -28,55 +22,40 @@ export default function ServiceCard({
   price,
   isActive = true,
   onEdit,
-  onToggleActive,
-  onDelete,
 }: ServiceCardProps) {
   return (
-    <Card className={cn(
-      "glass-card overflow-hidden animate-fade-in transition-opacity",
-      !isActive && "opacity-60"
-    )}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-2">
-              <p className="font-display text-lg tracking-wide">{name}</p>
-              {!isActive && (
-                <Badge variant="secondary" className="text-xs">Inactive</Badge>
-              )}
-            </div>
-            {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
-            )}
-            <div className="flex items-center gap-4">
-              <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" />
-                {duration} min
-              </span>
-              <span className="flex items-center gap-1 text-sm font-medium text-primary">
-                <DollarSign className="w-4 h-4" />
-                {price.toFixed(2)}
-              </span>
-            </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="shrink-0">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
-              <DropdownMenuItem onClick={onToggleActive}>
-                {isActive ? "Deactivate" : "Activate"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDelete} className="text-destructive">
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <motion.div
+      variants={fadeUpItem}
+      whileTap={cardTap}
+      className={cn("mobile-card", !isActive && "opacity-60")}
+      onClick={onEdit}
+    >
+      <div className="flex items-center gap-4">
+        {/* Price badge */}
+        <div className="w-16 h-16 rounded-2xl bg-gradient-gold flex flex-col items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+          <span className="text-xl font-display text-primary-foreground">${price}</span>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <p className="font-semibold text-foreground">{name}</p>
+            {!isActive && (
+              <Badge variant="secondary" className="text-[10px] px-2 py-0.5">Inactive</Badge>
+            )}
+          </div>
+          {description && (
+            <p className="text-sm text-muted-foreground mb-1.5 line-clamp-1">{description}</p>
+          )}
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Clock className="w-3.5 h-3.5" />
+            <span className="font-semibold">{duration} min</span>
+          </div>
+        </div>
+
+        {/* Arrow */}
+        <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+      </div>
+    </motion.div>
   );
 }

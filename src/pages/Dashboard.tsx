@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, UserPlus } from "lucide-react";
 import StatCard from "@/components/StatCard";
 import AppointmentCard from "@/components/AppointmentCard";
 import AnimatedPage, { staggerContainer } from "@/components/AnimatedPage";
@@ -55,7 +54,17 @@ const mockAppointments = [
 export default function Dashboard() {
   return (
     <AnimatedPage>
-      <div className="space-y-6">
+      <div className="space-y-5">
+        {/* Greeting */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="pt-1"
+        >
+          <h2 className="text-2xl font-display tracking-wide">Good Morning! 👋</h2>
+          <p className="text-sm text-muted-foreground">Here's your day at a glance</p>
+        </motion.div>
+
         {/* Stats Grid */}
         <motion.div 
           className="grid grid-cols-2 gap-3"
@@ -90,26 +99,43 @@ export default function Dashboard() {
           />
         </motion.div>
 
+        {/* Quick Actions */}
+        <motion.div 
+          className="flex gap-3"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <motion.button
+            className="flex-1 h-14 rounded-2xl bg-gradient-gold text-primary-foreground font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+            whileTap={{ scale: 0.97 }}
+          >
+            <Plus className="w-5 h-5" />
+            Walk-in
+          </motion.button>
+          <motion.button
+            className="flex-1 h-14 rounded-2xl bg-secondary text-foreground font-semibold flex items-center justify-center gap-2"
+            whileTap={{ scale: 0.97 }}
+          >
+            <UserPlus className="w-5 h-5" />
+            New Client
+          </motion.button>
+        </motion.div>
+
         {/* Today's Appointments */}
         <div className="space-y-3">
           <motion.div 
             className="flex items-center justify-between"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.4 }}
           >
-            <h2 className="font-display text-xl tracking-wide text-gradient-gold">
-              TODAY'S SCHEDULE
+            <h2 className="font-display text-xl tracking-wide">
+              Today's Schedule
             </h2>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button size="sm" className="bg-gradient-gold text-primary-foreground hover:opacity-90">
-                <Plus className="w-4 h-4 mr-1" />
-                New
-              </Button>
-            </motion.div>
+            <span className="text-sm text-muted-foreground font-medium">
+              {mockAppointments.length} appointments
+            </span>
           </motion.div>
 
           <motion.div 
@@ -131,38 +157,6 @@ export default function Dashboard() {
             ))}
           </motion.div>
         </div>
-
-        {/* Quick Actions */}
-        <motion.div 
-          className="space-y-3"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <h2 className="font-display text-xl tracking-wide text-gradient-gold">
-            QUICK ACTIONS
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                variant="outline"
-                className="w-full h-16 flex-col gap-1 border-border hover:border-primary"
-              >
-                <Plus className="w-5 h-5" />
-                <span className="text-xs">Walk-in</span>
-              </Button>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                variant="outline"
-                className="w-full h-16 flex-col gap-1 border-border hover:border-primary"
-              >
-                <Plus className="w-5 h-5" />
-                <span className="text-xs">New Client</span>
-              </Button>
-            </motion.div>
-          </div>
-        </motion.div>
       </div>
     </AnimatedPage>
   );

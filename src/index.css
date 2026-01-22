@@ -136,4 +136,23 @@
   .glow-gold {
     box-shadow: 0 0 20px hsl(43 96% 56% / 0.3);
   }
+
+  /* Mobile app safe areas */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Mobile card style */
+  .mobile-card {
+    @apply bg-card rounded-3xl p-4 shadow-lg shadow-black/20 border border-border/30;
+  }
+
+  /* Touch feedback */
+  .touch-feedback {
+    @apply active:scale-[0.98] transition-transform;
+  }
 }
