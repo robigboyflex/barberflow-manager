@@ -73,7 +73,7 @@ export default function Welcome() {
       >
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/auth")}
           className="w-full h-16 rounded-2xl bg-gradient-gold text-primary-foreground font-bold text-lg shadow-lg shadow-primary/20 touch-feedback"
         >
           Get Started
@@ -81,7 +81,7 @@ export default function Welcome() {
 
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/auth?mode=signin")}
           className="w-full h-16 rounded-2xl border-2 border-border bg-transparent text-foreground font-bold text-lg touch-feedback"
         >
           Sign In
