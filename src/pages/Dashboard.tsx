@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { Store, Users, TrendingUp, Plus } from "lucide-react";
+import { Store, Users, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import AnimatedPage from "@/components/AnimatedPage";
 import ShopCard, { AddShopButton } from "@/components/ShopCard";
 import { useAuth } from "@/hooks/useAuth";
-
+import { toast } from "sonner";
 // Mock data for demo
 const mockShops = [
   {
@@ -32,12 +33,33 @@ const mockStats = {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   // Get user's first name from metadata or email
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 
                     user?.email?.split('@')[0] || 
                     'Owner';
 
+  const handleRevenueClick = () => {
+    toast.info("Revenue details coming soon!");
+  };
+
+  const handleShopsStatClick = () => {
+    toast.info("Shops management coming soon!");
+  };
+
+  const handleStaffStatClick = () => {
+    toast.info("Staff management coming soon!");
+  };
+
+  const handleAddShop = () => {
+    toast.info("Add shop feature coming soon!");
+  };
+
+  const handleShopClick = (shopId: string, shopName: string) => {
+    toast.success(`Opening ${shopName}...`);
+    // Future: navigate(`/shop/${shopId}`)
+  };
   return (
     <AnimatedPage>
       <div className="space-y-5 pb-8">
@@ -45,8 +67,10 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          whileTap={{ scale: 0.98 }}
           transition={{ delay: 0.1 }}
-          className="rounded-3xl bg-gradient-gold p-5 shadow-xl"
+          onClick={handleRevenueClick}
+          className="rounded-3xl bg-gradient-gold p-5 shadow-xl cursor-pointer active:opacity-90"
         >
           <div className="flex items-start justify-between">
             <div>
@@ -70,21 +94,29 @@ export default function Dashboard() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="mobile-card">
+          <motion.div 
+            className="mobile-card cursor-pointer active:opacity-90"
+            whileTap={{ scale: 0.97 }}
+            onClick={handleShopsStatClick}
+          >
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-3">
               <Store className="w-5 h-5 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground mb-0.5">Shops</p>
             <h3 className="text-3xl font-display text-foreground">{mockStats.totalShops}</h3>
-          </div>
+          </motion.div>
 
-          <div className="mobile-card">
+          <motion.div 
+            className="mobile-card cursor-pointer active:opacity-90"
+            whileTap={{ scale: 0.97 }}
+            onClick={handleStaffStatClick}
+          >
             <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center mb-3">
               <Users className="w-5 h-5 text-success" />
             </div>
             <p className="text-sm text-muted-foreground mb-0.5">Total Staff</p>
             <h3 className="text-3xl font-display text-foreground">{mockStats.totalStaff}</h3>
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Your Shops Section */}
@@ -98,7 +130,7 @@ export default function Dashboard() {
             <h2 className="font-display text-xl tracking-wide text-foreground">
               Your Shops
             </h2>
-            <AddShopButton onClick={() => console.log('Add shop')} />
+            <AddShopButton onClick={handleAddShop} />
           </motion.div>
 
           <motion.div 
@@ -120,7 +152,7 @@ export default function Dashboard() {
                   staffCount={shop.staffCount}
                   todayRevenue={shop.todayRevenue}
                   isLive={shop.isLive}
-                  onClick={() => console.log('Navigate to shop', shop.id)}
+                  onClick={() => handleShopClick(shop.id, shop.name)}
                 />
               </motion.div>
             ))}
