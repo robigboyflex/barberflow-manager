@@ -234,6 +234,32 @@ export type Database = {
           },
         ]
       }
+      failed_pin_attempts: {
+        Row: {
+          attempt_time: string
+          id: string
+          shop_id: string
+        }
+        Insert: {
+          attempt_time?: string
+          id?: string
+          shop_id: string
+        }
+        Update: {
+          attempt_time?: string
+          id?: string
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "failed_pin_attempts_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -408,6 +434,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_old_pin_attempts: { Args: never; Returns: undefined }
       confirm_cut: {
         Args: { p_cashier_id: string; p_cut_id: string }
         Returns: boolean
