@@ -183,14 +183,11 @@ export default function CashierPortal() {
     setProcessingCutId(cutId);
 
     try {
-      const { error } = await supabase
-        .from("cuts")
-        .update({
-          status: "confirmed",
-          confirmed_by: staff.id,
-          confirmed_at: new Date().toISOString(),
-        })
-        .eq("id", cutId);
+      // Use server-side RPC function for secure cut confirmation
+      const { error } = await supabase.rpc('confirm_cut', {
+        p_cut_id: cutId,
+        p_cashier_id: staff.id
+      });
 
       if (error) throw error;
 
@@ -209,10 +206,11 @@ export default function CashierPortal() {
     setProcessingCutId(cutId);
 
     try {
-      const { error } = await supabase
-        .from("cuts")
-        .update({ status: "disputed" })
-        .eq("id", cutId);
+      // Use server-side RPC function for secure cut dispute
+      const { error } = await supabase.rpc('dispute_cut', {
+        p_cut_id: cutId,
+        p_cashier_id: staff.id
+      });
 
       if (error) throw error;
 
@@ -240,12 +238,13 @@ export default function CashierPortal() {
     setIsAddingExpense(true);
 
     try {
-      const { error } = await supabase.from("expenses").insert({
-        shop_id: staff.shop_id,
-        recorded_by: staff.id,
-        category: expenseCategory,
-        description: expenseDescription.trim(),
-        amount: parseFloat(expenseAmount),
+      // Use server-side RPC function for secure expense recording
+      const { error } = await supabase.rpc('record_expense', {
+        p_shop_id: staff.shop_id,
+        p_staff_id: staff.id,
+        p_category: expenseCategory,
+        p_description: expenseDescription.trim(),
+        p_amount: parseFloat(expenseAmount)
       });
 
       if (error) throw error;
