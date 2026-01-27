@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
+import { getUserFriendlyError, logError } from "@/lib/errorHandler";
 
 interface Shop {
   id: string;
@@ -46,8 +47,8 @@ export default function StaffLogin() {
       if (error) throw error;
       setShops(data || []);
     } catch (error) {
-      console.error("Error fetching shops:", error);
-      toast.error("Unable to load shops");
+      logError('StaffLogin.fetchShops', error);
+      toast.error(getUserFriendlyError(error, 'load shops'));
     } finally {
       setIsFetchingShops(false);
     }

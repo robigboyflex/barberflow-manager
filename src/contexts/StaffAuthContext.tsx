@@ -76,10 +76,21 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // Revoke session server-side
+    if (staff?.sessionToken) {
+      try {
+        await supabase.rpc('staff_logout', {
+          p_staff_id: staff.id,
+          p_session_token: staff.sessionToken
+        });
+      } catch (err) {
+        console.error("Logout error:", err);
+      }
+    }
     setStaff(null);
     sessionStorage.removeItem("staff_session");
-  }, []);
+  }, [staff]);
 
   const getSessionToken = useCallback(() => {
     return staff?.sessionToken || null;

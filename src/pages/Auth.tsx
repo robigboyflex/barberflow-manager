@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
+import { getUserFriendlyError } from "@/lib/errorHandler";
 
 const signUpSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -57,11 +58,7 @@ export default function Auth() {
         const { error: signUpError } = await signUp(email, password, fullName);
         
         if (signUpError) {
-          if (signUpError.message.includes("already registered")) {
-            setError("This email is already registered. Please sign in instead.");
-          } else {
-            setError(signUpError.message);
-          }
+          setError(getUserFriendlyError(signUpError, 'create account'));
           setLoading(false);
           return;
         }
@@ -78,11 +75,7 @@ export default function Auth() {
         const { error: signInError } = await signIn(email, password);
         
         if (signInError) {
-          if (signInError.message.includes("Invalid login")) {
-            setError("Invalid email or password. Please try again.");
-          } else {
-            setError(signInError.message);
-          }
+          setError(getUserFriendlyError(signInError, 'sign in'));
           setLoading(false);
           return;
         }
@@ -90,7 +83,7 @@ export default function Auth() {
         navigate("/dashboard");
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
+      setError(getUserFriendlyError(err, 'complete authentication'));
     }
     
     setLoading(false);
