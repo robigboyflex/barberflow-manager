@@ -13,6 +13,7 @@ export interface Staff {
     name: string;
     location: string;
   };
+  sessionToken?: string;
 }
 
 interface StaffAuthContextType {
@@ -20,6 +21,7 @@ interface StaffAuthContextType {
   isAuthenticated: boolean;
   login: (shopId: string, pin: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  getSessionToken: () => string | null;
 }
 
 const StaffAuthContext = createContext<StaffAuthContextType | undefined>(undefined);
@@ -32,43 +34,36 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (shopId: string, pin: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const { data, error } = await supabase
-        .from("staff")
-        .select(`
-          id,
-          name,
-          role,
-          shop_id,
-          phone,
-          is_active,
-          shops:shop_id (
-            id,
-            name,
-            location
-          )
-        `)
-        .eq("shop_id", shopId)
-        .eq("pin", pin)
-        .eq("is_active", true)
-        .maybeSingle();
+      // Use server-side PIN verification with hashed comparison
+      const { data, error } = await supabase.rpc('verify_staff_pin', {
+        shop_uuid: shopId,
+        pin_input: pin
+      });
 
       if (error) {
         console.error("Staff login error:", error);
         return { success: false, error: "Unable to verify PIN. Please try again." };
       }
 
-      if (!data) {
+      if (!data || data.length === 0) {
         return { success: false, error: "Invalid PIN or staff not found" };
       }
 
+      const staffRecord = data[0];
+      
       const staffData: Staff = {
-        id: data.id,
-        name: data.name,
-        role: data.role,
-        shop_id: data.shop_id,
-        phone: data.phone,
-        is_active: data.is_active,
-        shop: data.shops as Staff["shop"],
+        id: staffRecord.staff_id,
+        name: staffRecord.staff_name,
+        role: staffRecord.staff_role as Staff["role"],
+        shop_id: staffRecord.staff_shop_id,
+        phone: staffRecord.staff_phone,
+        is_active: staffRecord.staff_is_active,
+        shop: {
+          id: staffRecord.staff_shop_id,
+          name: staffRecord.shop_name,
+          location: staffRecord.shop_location,
+        },
+        sessionToken: staffRecord.session_token,
       };
 
       setStaff(staffData);
@@ -86,8 +81,12 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem("staff_session");
   }, []);
 
+  const getSessionToken = useCallback(() => {
+    return staff?.sessionToken || null;
+  }, [staff]);
+
   return (
-    <StaffAuthContext.Provider value={{ staff, isAuthenticated: !!staff, login, logout }}>
+    <StaffAuthContext.Provider value={{ staff, isAuthenticated: !!staff, login, logout, getSessionToken }}>
       {children}
     </StaffAuthContext.Provider>
   );

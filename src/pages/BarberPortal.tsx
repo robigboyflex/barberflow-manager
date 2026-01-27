@@ -128,12 +128,13 @@ export default function BarberPortal() {
     setIsLoggingCut(true);
 
     try {
-      const { error } = await supabase.from("cuts").insert({
-        shop_id: staff.shop_id,
-        barber_id: staff.id,
-        service_id: selectedService.id,
-        price: selectedService.price,
-        status: "pending",
+      // Use server-side RPC function for secure cut logging
+      const { error } = await supabase.rpc('log_cut', {
+        p_shop_id: staff.shop_id,
+        p_barber_id: staff.id,
+        p_service_id: selectedService.id,
+        p_price: selectedService.price,
+        p_client_name: null
       });
 
       if (error) throw error;

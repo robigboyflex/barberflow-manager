@@ -343,6 +343,7 @@ export type Database = {
           name: string
           phone: string | null
           pin: string
+          pin_hash: string | null
           role: Database["public"]["Enums"]["staff_role"]
           shop_id: string
           updated_at: string
@@ -354,6 +355,7 @@ export type Database = {
           name: string
           phone?: string | null
           pin: string
+          pin_hash?: string | null
           role: Database["public"]["Enums"]["staff_role"]
           shop_id: string
           updated_at?: string
@@ -365,6 +367,7 @@ export type Database = {
           name?: string
           phone?: string | null
           pin?: string
+          pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           shop_id?: string
           updated_at?: string
@@ -405,12 +408,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_cut: {
+        Args: { p_cashier_id: string; p_cut_id: string }
+        Returns: boolean
+      }
+      dispute_cut: {
+        Args: { p_cashier_id: string; p_cut_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      log_cut: {
+        Args: {
+          p_barber_id: string
+          p_client_name?: string
+          p_price: number
+          p_service_id: string
+          p_shop_id: string
+        }
+        Returns: string
+      }
+      record_expense: {
+        Args: {
+          p_amount: number
+          p_category: Database["public"]["Enums"]["expense_category"]
+          p_description: string
+          p_shop_id: string
+          p_staff_id: string
+        }
+        Returns: string
+      }
+      verify_staff_pin: {
+        Args: { pin_input: string; shop_uuid: string }
+        Returns: {
+          session_token: string
+          shop_location: string
+          shop_name: string
+          staff_id: string
+          staff_is_active: boolean
+          staff_name: string
+          staff_phone: string
+          staff_role: Database["public"]["Enums"]["staff_role"]
+          staff_shop_id: string
+        }[]
       }
     }
     Enums: {
