@@ -89,7 +89,8 @@ export default function Welcome() {
 
         <motion.button
           whileTap={{ scale: 0.97 }}
-          className="w-full py-4 text-muted-foreground text-base"
+          onClick={() => navigate("/staff-login")}
+          className="w-full py-4 text-muted-foreground text-base underline underline-offset-4"
         >
           Staff? Login with PIN
         </motion.button>

@@ -1,13 +1,13 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LayoutDashboard, Calendar, Users, Scissors } from "lucide-react";
+import { LayoutDashboard, BarChart3, Users, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Home" },
-  { path: "/appointments", icon: Calendar, label: "Bookings" },
-  { path: "/clients", icon: Users, label: "Clients" },
-  { path: "/services", icon: Scissors, label: "Services" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Home" },
+  { path: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
+  { path: "/dashboard/clients", icon: Users, label: "Clients" },
+  { path: "/dashboard/services", icon: Scissors, label: "Services" },
 ];
 
 export default function BottomNav() {
@@ -17,7 +17,8 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl z-50 safe-area-bottom">
       <div className="flex justify-around items-center py-2 px-2">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname === item.path || 
+            (item.path === "/dashboard" && location.pathname === "/dashboard");
           return (
             <NavLink
               key={item.path}
