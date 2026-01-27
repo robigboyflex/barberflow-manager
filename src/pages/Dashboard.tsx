@@ -1,40 +1,29 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Store, Users, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AnimatedPage from "@/components/AnimatedPage";
 import ShopCard, { AddShopButton } from "@/components/ShopCard";
+import AddShopModal from "@/components/AddShopModal";
 import { useAuth } from "@/hooks/useAuth";
+import { useShops } from "@/hooks/useShops";
 import { toast } from "sonner";
-// Mock data for demo
-const mockShops = [
-  {
-    id: "1",
-    name: "360 Cutz",
-    location: "Cape Coast",
-    staffCount: 3,
-    todayRevenue: 0,
-    isLive: true,
-  },
-  {
-    id: "2",
-    name: "London Barbs",
-    location: "Adum",
-    staffCount: 3,
-    todayRevenue: 0,
-    isLive: true,
-  },
-];
-
-const mockStats = {
-  todayRevenue: 0,
-  totalShops: 2,
-  totalStaff: 6,
-};
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isAddShopOpen, setIsAddShopOpen] = useState(false);
   
+  const { data: shops, isLoading, refetch } = useShops();
+
+  // Calculate stats from real data
+  const stats = {
+    todayRevenue: shops?.reduce((sum, shop) => sum + shop.todayRevenue, 0) || 0,
+    totalShops: shops?.length || 0,
+    totalStaff: shops?.reduce((sum, shop) => sum + shop.staffCount, 0) || 0,
+  };
+
   // Get user's first name from metadata or email
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 
                     user?.email?.split('@')[0] || 
@@ -53,13 +42,14 @@ export default function Dashboard() {
   };
 
   const handleAddShop = () => {
-    toast.info("Add shop feature coming soon!");
+    setIsAddShopOpen(true);
   };
 
   const handleShopClick = (shopId: string, shopName: string) => {
     toast.success(`Opening ${shopName}...`);
     // Future: navigate(`/shop/${shopId}`)
   };
+
   return (
     <AnimatedPage>
       <div className="space-y-5 pb-8">
@@ -78,7 +68,7 @@ export default function Dashboard() {
                 Today's Revenue
               </p>
               <h2 className="text-4xl font-display text-primary-foreground tracking-wide">
-                ${mockStats.todayRevenue.toFixed(2)}
+                ${stats.todayRevenue.toFixed(2)}
               </h2>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center">
@@ -103,7 +93,11 @@ export default function Dashboard() {
               <Store className="w-5 h-5 text-primary" />
             </div>
             <p className="text-sm text-muted-foreground mb-0.5">Shops</p>
-            <h3 className="text-3xl font-display text-foreground">{mockStats.totalShops}</h3>
+            {isLoading ? (
+              <Skeleton className="h-9 w-12" />
+            ) : (
+              <h3 className="text-3xl font-display text-foreground">{stats.totalShops}</h3>
+            )}
           </motion.div>
 
           <motion.div 
@@ -115,7 +109,11 @@ export default function Dashboard() {
               <Users className="w-5 h-5 text-success" />
             </div>
             <p className="text-sm text-muted-foreground mb-0.5">Total Staff</p>
-            <h3 className="text-3xl font-display text-foreground">{mockStats.totalStaff}</h3>
+            {isLoading ? (
+              <Skeleton className="h-9 w-12" />
+            ) : (
+              <h3 className="text-3xl font-display text-foreground">{stats.totalStaff}</h3>
+            )}
           </motion.div>
         </motion.div>
 
@@ -139,26 +137,54 @@ export default function Dashboard() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
           >
-            {mockShops.map((shop, index) => (
+            {isLoading ? (
+              // Loading skeletons
+              <>
+                <Skeleton className="h-28 rounded-2xl" />
+                <Skeleton className="h-28 rounded-2xl" />
+              </>
+            ) : shops && shops.length > 0 ? (
+              shops.map((shop, index) => (
+                <motion.div
+                  key={shop.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + index * 0.1 }}
+                >
+                  <ShopCard
+                    name={shop.name}
+                    location={shop.location}
+                    staffCount={shop.staffCount}
+                    todayRevenue={shop.todayRevenue}
+                    isLive={shop.is_active}
+                    onClick={() => handleShopClick(shop.id, shop.name)}
+                  />
+                </motion.div>
+              ))
+            ) : (
+              // Empty state
               <motion.div
-                key={shop.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + index * 0.1 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mobile-card text-center py-8"
               >
-                <ShopCard
-                  name={shop.name}
-                  location={shop.location}
-                  staffCount={shop.staffCount}
-                  todayRevenue={shop.todayRevenue}
-                  isLive={shop.isLive}
-                  onClick={() => handleShopClick(shop.id, shop.name)}
-                />
+                <Store className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-muted-foreground font-medium mb-1">No shops yet</p>
+                <p className="text-sm text-muted-foreground/70">
+                  Tap "Add Shop" to create your first shop
+                </p>
               </motion.div>
-            ))}
+            )}
           </motion.div>
         </div>
       </div>
+
+      {/* Add Shop Modal */}
+      <AddShopModal
+        isOpen={isAddShopOpen}
+        onClose={() => setIsAddShopOpen(false)}
+        onSuccess={() => refetch()}
+      />
     </AnimatedPage>
   );
 }
