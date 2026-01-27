@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
+import { getUserFriendlyError, logError } from "@/lib/errorHandler";
 
 interface ActivityItem {
   id: string;
@@ -32,7 +33,7 @@ interface DailySummary {
 
 export default function CashierPortal() {
   const navigate = useNavigate();
-  const { staff, logout, isAuthenticated } = useStaffAuth();
+  const { staff, logout, isAuthenticated, getSessionToken } = useStaffAuth();
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
   const [summary, setSummary] = useState<DailySummary>({
@@ -81,6 +82,8 @@ export default function CashierPortal() {
 
   const fetchData = async () => {
     if (!staff) return;
+    
+    const sessionToken = getSessionToken();
 
     try {
       const today = new Date();
@@ -107,87 +110,82 @@ export default function CashierPortal() {
         setCurrentShiftId(null);
       }
 
-      // Fetch my confirmed cuts (where I was the confirming cashier)
-      const { data: myCuts } = await supabase
-        .from("cuts")
-        .select("id, price, payment_method, client_name, created_at, services:service_id(name)")
-        .eq("shop_id", staff.shop_id)
-        .eq("confirmed_by", staff.id)
-        .eq("status", "confirmed")
-        .gte("created_at", today.toISOString())
-        .lt("created_at", tomorrow.toISOString())
-        .order("created_at", { ascending: false });
-
-      const myServicesCount = myCuts?.length || 0;
-      const myEarnings = myCuts?.reduce((sum, c) => sum + Number(c.price), 0) || 0;
-
-      // Fetch all shop cuts today
-      const { data: allCuts } = await supabase
-        .from("cuts")
-        .select("id, price")
-        .eq("shop_id", staff.shop_id)
-        .eq("status", "confirmed")
-        .gte("created_at", today.toISOString())
-        .lt("created_at", tomorrow.toISOString());
-
-      const shopServicesCount = allCuts?.length || 0;
-      const shopRevenue = allCuts?.reduce((sum, c) => sum + Number(c.price), 0) || 0;
-
-      setSummary({
-        myServicesCount,
-        myEarnings,
-        shopServicesCount,
-        shopRevenue,
-      });
-
-      // Build recent activity
-      const activities: ActivityItem[] = [];
-
-      // Add payment activities
-      myCuts?.forEach((cut) => {
-        const serviceName = (cut.services as any)?.name || "Service";
-        const clientPart = cut.client_name ? ` for ${cut.client_name}` : "";
-        activities.push({
-          id: cut.id,
-          type: "payment",
-          description: `${serviceName}${clientPart} - GH₵${Number(cut.price).toFixed(0)} (${cut.payment_method || "cash"})`,
-          timestamp: cut.created_at,
-          amount: Number(cut.price),
-          paymentMethod: cut.payment_method || "cash",
+      // Fetch cashier's confirmed cuts using secure RPC
+      if (sessionToken) {
+        const { data: allShopCuts, error: cutsError } = await supabase.rpc('get_shop_cuts_for_cashier', {
+          p_cashier_id: staff.id,
+          p_session_token: sessionToken,
+          p_start_date: today.toISOString(),
+          p_end_date: tomorrow.toISOString()
         });
-      });
 
-      // Add shift activities
-      const { data: todayShifts } = await supabase
-        .from("shifts")
-        .select("id, clock_in, clock_out")
-        .eq("staff_id", staff.id)
-        .gte("clock_in", today.toISOString())
-        .order("clock_in", { ascending: false });
+        if (cutsError) throw cutsError;
 
-      todayShifts?.forEach((shift) => {
-        activities.push({
-          id: `${shift.id}-in`,
-          type: "clock_in",
-          description: `${staff.name} clocked in`,
-          timestamp: shift.clock_in,
+        // Filter my confirmed cuts
+        const myCuts = allShopCuts?.filter((c: any) => c.status === 'confirmed') || [];
+        const myServicesCount = myCuts.length;
+        const myEarnings = myCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
+
+        // Shop totals
+        const confirmedCuts = allShopCuts?.filter((c: any) => c.status === 'confirmed') || [];
+        const shopServicesCount = confirmedCuts.length;
+        const shopRevenue = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
+
+        setSummary({
+          myServicesCount,
+          myEarnings,
+          shopServicesCount,
+          shopRevenue,
         });
-        if (shift.clock_out) {
+
+        // Build recent activity
+        const activities: ActivityItem[] = [];
+
+        // Add payment activities
+        myCuts.forEach((cut: any) => {
+          const clientPart = cut.client_name ? ` for ${cut.client_name}` : "";
           activities.push({
-            id: `${shift.id}-out`,
-            type: "clock_out",
-            description: `${staff.name} clocked out`,
-            timestamp: shift.clock_out,
+            id: cut.id,
+            type: "payment",
+            description: `${cut.service_name}${clientPart} - GH₵${Number(cut.price).toFixed(0)} (${cut.payment_method || "cash"})`,
+            timestamp: cut.created_at,
+            amount: Number(cut.price),
+            paymentMethod: cut.payment_method || "cash",
           });
-        }
-      });
+        });
 
-      // Sort by timestamp descending
-      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setRecentActivity(activities.slice(0, 10));
+        // Add shift activities
+        const { data: todayShifts } = await supabase
+          .from("shifts")
+          .select("id, clock_in, clock_out")
+          .eq("staff_id", staff.id)
+          .gte("clock_in", today.toISOString())
+          .order("clock_in", { ascending: false });
+
+        todayShifts?.forEach((shift) => {
+          activities.push({
+            id: `${shift.id}-in`,
+            type: "clock_in",
+            description: `${staff.name} clocked in`,
+            timestamp: shift.clock_in,
+          });
+          if (shift.clock_out) {
+            activities.push({
+              id: `${shift.id}-out`,
+              type: "clock_out",
+              description: `${staff.name} clocked out`,
+              timestamp: shift.clock_out,
+            });
+          }
+        });
+
+        // Sort by timestamp descending
+        activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setRecentActivity(activities.slice(0, 10));
+      }
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to load data");
+      logError('CashierPortal.fetchData', error);
+      toast.error(getUserFriendlyError(error, 'load data'));
     } finally {
       setIsLoading(false);
     }
@@ -212,9 +210,9 @@ export default function CashierPortal() {
       setCurrentShiftId(data.id);
       toast.success("Clocked in successfully!");
       fetchData();
-    } catch (error: any) {
-      console.error("Error clocking in:", error);
-      toast.error(error.message || "Failed to clock in");
+    } catch (error) {
+      logError('CashierPortal.handleClockIn', error);
+      toast.error(getUserFriendlyError(error, 'clock in'));
     }
   };
 
@@ -233,9 +231,9 @@ export default function CashierPortal() {
       setCurrentShiftId(null);
       toast.success("Clocked out successfully!");
       fetchData();
-    } catch (error: any) {
-      console.error("Error clocking out:", error);
-      toast.error(error.message || "Failed to clock out");
+    } catch (error) {
+      logError('CashierPortal.handleClockOut', error);
+      toast.error(getUserFriendlyError(error, 'clock out'));
     }
   };
 

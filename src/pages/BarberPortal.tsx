@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
+import { getUserFriendlyError, logError } from "@/lib/errorHandler";
 
 interface Service {
   id: string;
@@ -36,7 +37,7 @@ interface Cut {
 
 export default function BarberPortal() {
   const navigate = useNavigate();
-  const { staff, logout, isAuthenticated } = useStaffAuth();
+  const { staff, logout, isAuthenticated, getSessionToken } = useStaffAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [todayCuts, setTodayCuts] = useState<Cut[]>([]);
   const [weekCuts, setWeekCuts] = useState<number>(0);
@@ -59,15 +60,18 @@ export default function BarberPortal() {
 
   const fetchData = async () => {
     if (!staff) return;
+    
+    const sessionToken = getSessionToken();
 
     try {
-      // Fetch services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from("services")
-        .select("id, name, price")
-        .eq("shop_id", staff.shop_id)
-        .eq("is_active", true)
-        .order("name");
+      // Fetch services using secure RPC
+      const { data: servicesData, error: servicesError } = sessionToken 
+        ? await supabase.rpc('get_shop_services', {
+            p_shop_id: staff.shop_id,
+            p_staff_id: staff.id,
+            p_session_token: sessionToken
+          })
+        : { data: [], error: null };
 
       if (servicesError) throw servicesError;
       setServices(servicesData || []);
@@ -82,41 +86,42 @@ export default function BarberPortal() {
       const weekStart = new Date(today);
       weekStart.setDate(weekStart.getDate() - 7);
 
-      // Fetch today's cuts
-      const { data: todayData, error: todayError } = await supabase
-        .from("cuts")
-        .select(`
-          id,
-          service_id,
-          client_name,
-          price,
-          status,
-          created_at,
-          services:service_id (id, name, price)
-        `)
-        .eq("barber_id", staff.id)
-        .gte("created_at", today.toISOString())
-        .lt("created_at", tomorrow.toISOString())
-        .order("created_at", { ascending: false });
+      // Fetch today's cuts using secure RPC
+      if (sessionToken) {
+        const { data: todayData, error: todayError } = await supabase.rpc('get_barber_cuts', {
+          p_barber_id: staff.id,
+          p_session_token: sessionToken,
+          p_start_date: today.toISOString(),
+          p_end_date: tomorrow.toISOString()
+        });
 
-      if (todayError) throw todayError;
-      setTodayCuts(todayData?.map(c => ({ ...c, service: c.services as unknown as Service })) || []);
+        if (todayError) throw todayError;
+        setTodayCuts(todayData?.map((c: any) => ({ 
+          id: c.id,
+          service_id: c.service_id,
+          client_name: c.client_name,
+          price: c.price,
+          status: c.status,
+          created_at: c.created_at,
+          service: { id: c.service_id, name: c.service_name, price: c.service_price }
+        })) || []);
 
-      // Fetch week's cuts (just count)
-      const { count: weekCount, error: weekError } = await supabase
-        .from("cuts")
-        .select("id", { count: "exact", head: true })
-        .eq("barber_id", staff.id)
-        .in("status", ["confirmed", "pending"])
-        .gte("created_at", weekStart.toISOString())
-        .lt("created_at", tomorrow.toISOString());
+        // Fetch week's cuts count
+        const { data: weekData, error: weekError } = await supabase.rpc('get_barber_cuts', {
+          p_barber_id: staff.id,
+          p_session_token: sessionToken,
+          p_start_date: weekStart.toISOString(),
+          p_end_date: tomorrow.toISOString()
+        });
 
-      if (weekError) throw weekError;
-      setWeekCuts(weekCount || 0);
+        if (weekError) throw weekError;
+        const validCuts = weekData?.filter((c: any) => c.status === 'confirmed' || c.status === 'pending') || [];
+        setWeekCuts(validCuts.length);
+      }
 
     } catch (error) {
-      console.error("Error fetching data:", error);
-      toast.error("Failed to load data");
+      logError('BarberPortal.fetchData', error);
+      toast.error(getUserFriendlyError(error, 'load data'));
     } finally {
       setIsLoading(false);
     }
@@ -126,15 +131,17 @@ export default function BarberPortal() {
     if (!selectedService || !staff) return;
 
     setIsLoggingCut(true);
+    const sessionToken = getSessionToken();
 
     try {
-      // Use server-side RPC function for secure cut logging
+      // Use server-side RPC function with session validation
       const { error } = await supabase.rpc('log_cut', {
         p_shop_id: staff.shop_id,
         p_barber_id: staff.id,
         p_service_id: selectedService.id,
         p_price: selectedService.price,
-        p_client_name: null
+        p_client_name: null,
+        p_session_token: sessionToken
       });
 
       if (error) throw error;
@@ -142,9 +149,9 @@ export default function BarberPortal() {
       toast.success(`${selectedService.name} logged!`);
       setSelectedService(null);
       fetchData();
-    } catch (error: any) {
-      console.error("Error logging cut:", error);
-      toast.error(error.message || "Failed to log cut");
+    } catch (error) {
+      logError('BarberPortal.handleLogCut', error);
+      toast.error(getUserFriendlyError(error, 'log cut'));
     } finally {
       setIsLoggingCut(false);
     }

@@ -453,6 +453,41 @@ export type Database = {
           },
         ]
       }
+      staff_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          revoked: boolean
+          staff_id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          revoked?: boolean
+          staff_id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          revoked?: boolean
+          staff_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_sessions_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -479,14 +514,75 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_sessions: { Args: never; Returns: undefined }
       cleanup_old_pin_attempts: { Args: never; Returns: undefined }
-      confirm_cut: {
-        Args: { p_cashier_id: string; p_cut_id: string }
-        Returns: boolean
+      confirm_cut:
+        | { Args: { p_cashier_id: string; p_cut_id: string }; Returns: boolean }
+        | {
+            Args: {
+              p_cashier_id: string
+              p_cut_id: string
+              p_session_token?: string
+            }
+            Returns: boolean
+          }
+      dispute_cut:
+        | { Args: { p_cashier_id: string; p_cut_id: string }; Returns: boolean }
+        | {
+            Args: {
+              p_cashier_id: string
+              p_cut_id: string
+              p_session_token?: string
+            }
+            Returns: boolean
+          }
+      get_barber_cuts: {
+        Args: {
+          p_barber_id: string
+          p_end_date?: string
+          p_session_token: string
+          p_start_date?: string
+        }
+        Returns: {
+          client_name: string
+          created_at: string
+          id: string
+          price: number
+          service_id: string
+          service_name: string
+          service_price: number
+          status: Database["public"]["Enums"]["cut_status"]
+        }[]
       }
-      dispute_cut: {
-        Args: { p_cashier_id: string; p_cut_id: string }
-        Returns: boolean
+      get_shop_cuts_for_cashier: {
+        Args: {
+          p_cashier_id: string
+          p_end_date?: string
+          p_session_token: string
+          p_start_date?: string
+        }
+        Returns: {
+          barber_id: string
+          barber_name: string
+          client_name: string
+          confirmed_at: string
+          created_at: string
+          id: string
+          payment_method: string
+          price: number
+          service_name: string
+          status: Database["public"]["Enums"]["cut_status"]
+        }[]
+      }
+      get_shop_services: {
+        Args: { p_session_token: string; p_shop_id: string; p_staff_id: string }
+        Returns: {
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+        }[]
       }
       has_role: {
         Args: {
@@ -495,25 +591,57 @@ export type Database = {
         }
         Returns: boolean
       }
-      log_cut: {
-        Args: {
-          p_barber_id: string
-          p_client_name?: string
-          p_price: number
-          p_service_id: string
-          p_shop_id: string
-        }
-        Returns: string
+      log_cut:
+        | {
+            Args: {
+              p_barber_id: string
+              p_client_name?: string
+              p_price: number
+              p_service_id: string
+              p_shop_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_barber_id: string
+              p_client_name?: string
+              p_price: number
+              p_service_id: string
+              p_session_token?: string
+              p_shop_id: string
+            }
+            Returns: string
+          }
+      record_expense:
+        | {
+            Args: {
+              p_amount: number
+              p_category: Database["public"]["Enums"]["expense_category"]
+              p_description: string
+              p_shop_id: string
+              p_staff_id: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_category: Database["public"]["Enums"]["expense_category"]
+              p_description: string
+              p_session_token?: string
+              p_shop_id: string
+              p_staff_id: string
+            }
+            Returns: string
+          }
+      staff_logout: {
+        Args: { p_session_token: string; p_staff_id: string }
+        Returns: boolean
       }
-      record_expense: {
-        Args: {
-          p_amount: number
-          p_category: Database["public"]["Enums"]["expense_category"]
-          p_description: string
-          p_shop_id: string
-          p_staff_id: string
-        }
-        Returns: string
+      validate_staff_session: {
+        Args: { p_session_token: string; p_staff_id: string }
+        Returns: boolean
       }
       verify_staff_pin: {
         Args: { pin_input: string; shop_uuid: string }

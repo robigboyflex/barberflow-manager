@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { getUserFriendlyError, logError } from "@/lib/errorHandler";
+import { useStaffAuth } from "@/contexts/StaffAuthContext";
 
 interface Service {
   id: string;
@@ -35,6 +37,7 @@ export default function RecordPaymentModal({
   cashierId,
   onSuccess,
 }: RecordPaymentModalProps) {
+  const { getSessionToken } = useStaffAuth();
   const [customerName, setCustomerName] = useState("");
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -53,8 +56,10 @@ export default function RecordPaymentModal({
 
   const fetchData = async () => {
     setIsLoading(true);
+    const sessionToken = getSessionToken();
+    
     try {
-      // Fetch barbers
+      // Fetch barbers (owners manage staff, but we can read through RLS for display)
       const { data: barbersData } = await supabase
         .from("staff")
         .select("id, name")
@@ -64,19 +69,23 @@ export default function RecordPaymentModal({
 
       setBarbers(barbersData || []);
 
-      // Fetch services
-      const { data: servicesData } = await supabase
-        .from("services")
-        .select("id, name, price")
-        .eq("shop_id", shopId)
-        .eq("is_active", true);
+      // Fetch services using secure RPC
+      if (sessionToken) {
+        const { data: servicesData, error: servicesError } = await supabase.rpc('get_shop_services', {
+          p_shop_id: shopId,
+          p_staff_id: cashierId,
+          p_session_token: sessionToken
+        });
 
-      setServices(servicesData || []);
+        if (!servicesError) {
+          setServices(servicesData || []);
 
-      // Set default service price if available
-      if (servicesData && servicesData.length > 0) {
-        setSelectedService(servicesData[0].id);
-        setPrice(servicesData[0].price.toString());
+          // Set default service price if available
+          if (servicesData && servicesData.length > 0) {
+            setSelectedService(servicesData[0].id);
+            setPrice(servicesData[0].price.toString());
+          }
+        }
       }
 
       // Set default barber if available
@@ -84,7 +93,7 @@ export default function RecordPaymentModal({
         setSelectedBarber(barbersData[0].id);
       }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      logError('RecordPaymentModal.fetchData', error);
     } finally {
       setIsLoading(false);
     }
@@ -113,29 +122,37 @@ export default function RecordPaymentModal({
     }
 
     setIsSubmitting(true);
+    const sessionToken = getSessionToken();
 
     try {
-      const { error } = await supabase.from("cuts").insert({
-        shop_id: shopId,
-        barber_id: selectedBarber,
-        service_id: selectedService,
-        client_name: customerName.trim() || null,
-        price: parseFloat(price),
-        status: "confirmed",
-        confirmed_by: cashierId,
-        confirmed_at: new Date().toISOString(),
-        payment_method: paymentMethod,
+      // Use secure RPC to log and confirm the cut
+      const { data: cutId, error: logError } = await supabase.rpc('log_cut', {
+        p_shop_id: shopId,
+        p_barber_id: selectedBarber,
+        p_service_id: selectedService,
+        p_price: parseFloat(price),
+        p_client_name: customerName.trim() || null,
+        p_session_token: sessionToken
       });
 
-      if (error) throw error;
+      if (logError) throw logError;
+
+      // Confirm the cut
+      const { error: confirmError } = await supabase.rpc('confirm_cut', {
+        p_cut_id: cutId,
+        p_cashier_id: cashierId,
+        p_session_token: sessionToken
+      });
+
+      if (confirmError) throw confirmError;
 
       toast.success("Payment recorded successfully!");
       resetForm();
       onSuccess();
       onClose();
-    } catch (error: any) {
-      console.error("Error recording payment:", error);
-      toast.error(error.message || "Failed to record payment");
+    } catch (error) {
+      logError('RecordPaymentModal.handleSubmit', error);
+      toast.error(getUserFriendlyError(error, 'record payment'));
     } finally {
       setIsSubmitting(false);
     }
