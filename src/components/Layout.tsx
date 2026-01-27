@@ -1,6 +1,5 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import BottomNav from "./BottomNav";
 import Header from "./Header";
 
 export default function Layout() {
@@ -9,12 +8,11 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="flex-1 pb-24 px-4 pt-2 w-full overflow-x-hidden overflow-y-auto">
+      <main className="flex-1 pb-8 px-4 pt-2 w-full overflow-x-hidden overflow-y-auto safe-area-bottom">
         <AnimatePresence mode="wait">
           <Outlet key={location.pathname} />
         </AnimatePresence>
       </main>
-      <BottomNav />
     </div>
   );
 }
