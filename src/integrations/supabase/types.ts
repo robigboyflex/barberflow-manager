@@ -514,6 +514,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cashier_record_payment: {
+        Args: {
+          p_barber_id: string
+          p_cashier_id: string
+          p_client_name?: string
+          p_payment_method?: string
+          p_price: number
+          p_service_id: string
+          p_session_token?: string
+          p_shop_id: string
+        }
+        Returns: string
+      }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
       cleanup_old_pin_attempts: { Args: never; Returns: undefined }
       confirm_cut:
@@ -554,6 +567,13 @@ export type Database = {
           status: Database["public"]["Enums"]["cut_status"]
         }[]
       }
+      get_shop_barbers: {
+        Args: { p_session_token: string; p_shop_id: string; p_staff_id: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_shop_cuts_for_cashier: {
         Args: {
           p_cashier_id: string
@@ -582,6 +602,21 @@ export type Database = {
           is_active: boolean
           name: string
           price: number
+        }[]
+      }
+      get_staff_active_shift: {
+        Args: { p_session_token: string; p_staff_id: string }
+        Returns: {
+          clock_in: string
+          shift_id: string
+        }[]
+      }
+      get_staff_today_shifts: {
+        Args: { p_session_token: string; p_staff_id: string }
+        Returns: {
+          clock_in: string
+          clock_out: string
+          shift_id: string
         }[]
       }
       has_role: {
@@ -635,6 +670,18 @@ export type Database = {
             }
             Returns: string
           }
+      staff_clock_in: {
+        Args: { p_session_token: string; p_shop_id: string; p_staff_id: string }
+        Returns: string
+      }
+      staff_clock_out: {
+        Args: {
+          p_session_token: string
+          p_shift_id: string
+          p_staff_id: string
+        }
+        Returns: boolean
+      }
       staff_logout: {
         Args: { p_session_token: string; p_staff_id: string }
         Returns: boolean

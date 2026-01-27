@@ -84,6 +84,11 @@ export default function CashierPortal() {
     if (!staff) return;
     
     const sessionToken = getSessionToken();
+    if (!sessionToken) {
+      toast.error("Session expired. Please log in again.");
+      navigate("/staff-login");
+      return;
+    }
 
     try {
       const today = new Date();
@@ -91,20 +96,19 @@ export default function CashierPortal() {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // Check for active shift
-      const { data: activeShift } = await supabase
-        .from("shifts")
-        .select("id, clock_in")
-        .eq("staff_id", staff.id)
-        .gte("clock_in", today.toISOString())
-        .is("clock_out", null)
-        .order("clock_in", { ascending: false })
-        .limit(1)
-        .single();
+      // Check for active shift using secure RPC
+      const { data: activeShift, error: shiftError } = await supabase.rpc('get_staff_active_shift', {
+        p_staff_id: staff.id,
+        p_session_token: sessionToken
+      });
 
-      if (activeShift) {
+      if (shiftError) {
+        logError('CashierPortal.getActiveShift', shiftError);
+      }
+
+      if (activeShift && activeShift.length > 0) {
         setIsClockedIn(true);
-        setCurrentShiftId(activeShift.id);
+        setCurrentShiftId(activeShift[0].shift_id);
       } else {
         setIsClockedIn(false);
         setCurrentShiftId(null);
@@ -154,24 +158,22 @@ export default function CashierPortal() {
           });
         });
 
-        // Add shift activities
-        const { data: todayShifts } = await supabase
-          .from("shifts")
-          .select("id, clock_in, clock_out")
-          .eq("staff_id", staff.id)
-          .gte("clock_in", today.toISOString())
-          .order("clock_in", { ascending: false });
+        // Add shift activities using secure RPC
+        const { data: todayShifts } = await supabase.rpc('get_staff_today_shifts', {
+          p_staff_id: staff.id,
+          p_session_token: sessionToken
+        });
 
-        todayShifts?.forEach((shift) => {
+        todayShifts?.forEach((shift: { shift_id: string; clock_in: string; clock_out: string | null }) => {
           activities.push({
-            id: `${shift.id}-in`,
+            id: `${shift.shift_id}-in`,
             type: "clock_in",
             description: `${staff.name} clocked in`,
             timestamp: shift.clock_in,
           });
           if (shift.clock_out) {
             activities.push({
-              id: `${shift.id}-out`,
+              id: `${shift.shift_id}-out`,
               type: "clock_out",
               description: `${staff.name} clocked out`,
               timestamp: shift.clock_out,
@@ -194,20 +196,24 @@ export default function CashierPortal() {
   const handleClockIn = async () => {
     if (!staff) return;
 
+    const sessionToken = getSessionToken();
+    if (!sessionToken) {
+      toast.error("Session expired. Please log in again.");
+      navigate("/staff-login");
+      return;
+    }
+
     try {
-      const { data, error } = await supabase
-        .from("shifts")
-        .insert({
-          staff_id: staff.id,
-          shop_id: staff.shop_id,
-        })
-        .select("id")
-        .single();
+      const { data, error } = await supabase.rpc('staff_clock_in', {
+        p_staff_id: staff.id,
+        p_shop_id: staff.shop_id,
+        p_session_token: sessionToken
+      });
 
       if (error) throw error;
 
       setIsClockedIn(true);
-      setCurrentShiftId(data.id);
+      setCurrentShiftId(data);
       toast.success("Clocked in successfully!");
       fetchData();
     } catch (error) {
@@ -219,11 +225,19 @@ export default function CashierPortal() {
   const handleClockOut = async () => {
     if (!staff || !currentShiftId) return;
 
+    const sessionToken = getSessionToken();
+    if (!sessionToken) {
+      toast.error("Session expired. Please log in again.");
+      navigate("/staff-login");
+      return;
+    }
+
     try {
-      const { error } = await supabase
-        .from("shifts")
-        .update({ clock_out: new Date().toISOString() })
-        .eq("id", currentShiftId);
+      const { error } = await supabase.rpc('staff_clock_out', {
+        p_staff_id: staff.id,
+        p_shift_id: currentShiftId,
+        p_session_token: sessionToken
+      });
 
       if (error) throw error;
 

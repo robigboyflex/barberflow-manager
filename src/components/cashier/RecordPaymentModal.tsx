@@ -58,39 +58,42 @@ export default function RecordPaymentModal({
     setIsLoading(true);
     const sessionToken = getSessionToken();
     
+    if (!sessionToken) {
+      toast.error("Session expired. Please log in again.");
+      onClose();
+      return;
+    }
+
     try {
-      // Fetch barbers (owners manage staff, but we can read through RLS for display)
-      const { data: barbersData } = await supabase
-        .from("staff")
-        .select("id, name")
-        .eq("shop_id", shopId)
-        .eq("role", "barber")
-        .eq("is_active", true);
+      // Fetch barbers using secure RPC
+      const { data: barbersData, error: barbersError } = await supabase.rpc('get_shop_barbers', {
+        p_shop_id: shopId,
+        p_staff_id: cashierId,
+        p_session_token: sessionToken
+      });
 
-      setBarbers(barbersData || []);
-
-      // Fetch services using secure RPC
-      if (sessionToken) {
-        const { data: servicesData, error: servicesError } = await supabase.rpc('get_shop_services', {
-          p_shop_id: shopId,
-          p_staff_id: cashierId,
-          p_session_token: sessionToken
-        });
-
-        if (!servicesError) {
-          setServices(servicesData || []);
-
-          // Set default service price if available
-          if (servicesData && servicesData.length > 0) {
-            setSelectedService(servicesData[0].id);
-            setPrice(servicesData[0].price.toString());
-          }
+      if (!barbersError) {
+        setBarbers(barbersData || []);
+        if (barbersData && barbersData.length > 0) {
+          setSelectedBarber(barbersData[0].id);
         }
       }
 
-      // Set default barber if available
-      if (barbersData && barbersData.length > 0) {
-        setSelectedBarber(barbersData[0].id);
+      // Fetch services using secure RPC
+      const { data: servicesData, error: servicesError } = await supabase.rpc('get_shop_services', {
+        p_shop_id: shopId,
+        p_staff_id: cashierId,
+        p_session_token: sessionToken
+      });
+
+      if (!servicesError) {
+        setServices(servicesData || []);
+
+        // Set default service price if available
+        if (servicesData && servicesData.length > 0) {
+          setSelectedService(servicesData[0].id);
+          setPrice(servicesData[0].price.toString());
+        }
       }
     } catch (error) {
       logError('RecordPaymentModal.fetchData', error);
@@ -124,27 +127,27 @@ export default function RecordPaymentModal({
     setIsSubmitting(true);
     const sessionToken = getSessionToken();
 
+    if (!sessionToken) {
+      toast.error("Session expired. Please log in again.");
+      setIsSubmitting(false);
+      onClose();
+      return;
+    }
+
     try {
-      // Use secure RPC to log and confirm the cut
-      const { data: cutId, error: logError } = await supabase.rpc('log_cut', {
+      // Use secure RPC to record payment (logs and confirms in one transaction)
+      const { error: recordError } = await supabase.rpc('cashier_record_payment', {
+        p_cashier_id: cashierId,
         p_shop_id: shopId,
         p_barber_id: selectedBarber,
         p_service_id: selectedService,
         p_price: parseFloat(price),
         p_client_name: customerName.trim() || null,
+        p_payment_method: paymentMethod,
         p_session_token: sessionToken
       });
 
-      if (logError) throw logError;
-
-      // Confirm the cut
-      const { error: confirmError } = await supabase.rpc('confirm_cut', {
-        p_cut_id: cutId,
-        p_cashier_id: cashierId,
-        p_session_token: sessionToken
-      });
-
-      if (confirmError) throw confirmError;
+      if (recordError) throw recordError;
 
       toast.success("Payment recorded successfully!");
       resetForm();
