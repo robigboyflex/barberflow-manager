@@ -1,30 +1,37 @@
-import { Scissors, Bell } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  
+  // Get user's first name from metadata or email
+  const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 
+                    user?.email?.split('@')[0] || 
+                    'Owner';
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   return (
-    <header className="bg-card/95 backdrop-blur-xl px-5 py-4 sticky top-0 z-40 safe-area-top">
+    <header className="bg-background px-5 py-4 sticky top-0 z-40 safe-area-top">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <motion.div 
-            className="w-12 h-12 bg-gradient-gold rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20"
-            whileTap={{ scale: 0.95 }}
-          >
-            <Scissors className="w-6 h-6 text-primary-foreground" />
-          </motion.div>
-          <div>
-            <h1 className="font-display text-2xl tracking-wider text-gradient-gold">
-              BARBERFLOW
-            </h1>
-            <p className="text-[11px] text-muted-foreground font-medium">Premium Management</p>
-          </div>
+        <div>
+          <p className="text-sm text-muted-foreground">Welcome back,</p>
+          <h1 className="font-display text-3xl tracking-wide text-foreground">
+            {firstName}
+          </h1>
         </div>
         <motion.button
-          className="w-11 h-11 rounded-2xl bg-secondary flex items-center justify-center relative"
+          onClick={handleSignOut}
+          className="w-12 h-12 rounded-full bg-card border border-border flex items-center justify-center"
           whileTap={{ scale: 0.9 }}
         >
-          <Bell className="w-5 h-5 text-muted-foreground" />
-          <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-primary rounded-full" />
+          <LogOut className="w-5 h-5 text-destructive" />
         </motion.button>
       </div>
     </header>
