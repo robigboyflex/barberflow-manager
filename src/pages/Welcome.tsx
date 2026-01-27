@@ -96,15 +96,6 @@ export default function Welcome() {
         </motion.button>
       </motion.div>
 
-      {/* Footer */}
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-        className="absolute bottom-8 text-muted-foreground text-sm"
-      >
-        Optimized for fast performance on all devices
-      </motion.p>
     </div>
   );
 }
