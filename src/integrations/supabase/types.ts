@@ -14,6 +14,226 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          shop_id: string
+          staff_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          shop_id: string
+          staff_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          shop_id?: string
+          staff_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cuts: {
+        Row: {
+          barber_id: string
+          client_name: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          price: number
+          service_id: string
+          shop_id: string
+          status: Database["public"]["Enums"]["cut_status"]
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          client_name?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          price: number
+          service_id: string
+          shop_id: string
+          status?: Database["public"]["Enums"]["cut_status"]
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          client_name?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          price?: number
+          service_id?: string
+          shop_id?: string
+          status?: Database["public"]["Enums"]["cut_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cuts_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuts_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuts_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cuts_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_summaries: {
+        Row: {
+          created_at: string
+          id: string
+          net_profit: number
+          shop_id: string
+          summary_date: string
+          total_cuts: number
+          total_expenses: number
+          total_revenue: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          net_profit?: number
+          shop_id: string
+          summary_date: string
+          total_cuts?: number
+          total_expenses?: number
+          total_revenue?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          net_profit?: number
+          shop_id?: string
+          summary_date?: string
+          total_cuts?: number
+          total_expenses?: number
+          total_revenue?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_summaries_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["expense_category"]
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          recorded_by: string
+          shop_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description: string
+          expense_date?: string
+          id?: string
+          recorded_by: string
+          shop_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["expense_category"]
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          recorded_by?: string
+          shop_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -43,6 +263,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      services: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          shop_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          shop_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          shop_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shops: {
         Row: {
@@ -154,6 +415,15 @@ export type Database = {
     }
     Enums: {
       app_role: "owner" | "admin"
+      cut_status: "pending" | "confirmed" | "disputed" | "cancelled"
+      expense_category:
+        | "supplies"
+        | "utilities"
+        | "rent"
+        | "equipment"
+        | "maintenance"
+        | "other"
+      payment_status: "pending" | "paid" | "partial"
       staff_role: "barber" | "cashier" | "cleaner"
     }
     CompositeTypes: {
@@ -283,6 +553,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["owner", "admin"],
+      cut_status: ["pending", "confirmed", "disputed", "cancelled"],
+      expense_category: [
+        "supplies",
+        "utilities",
+        "rent",
+        "equipment",
+        "maintenance",
+        "other",
+      ],
+      payment_status: ["pending", "paid", "partial"],
       staff_role: ["barber", "cashier", "cleaner"],
     },
   },

@@ -45,9 +45,8 @@ export default function Dashboard() {
     setIsAddShopOpen(true);
   };
 
-  const handleShopClick = (shopId: string, shopName: string) => {
-    toast.success(`Opening ${shopName}...`);
-    // Future: navigate(`/shop/${shopId}`)
+  const handleShopClick = (shopId: string) => {
+    navigate(`/dashboard/shop/${shopId}`);
   };
 
   return (
@@ -157,7 +156,7 @@ export default function Dashboard() {
                     staffCount={shop.staffCount}
                     todayRevenue={shop.todayRevenue}
                     isLive={shop.is_active}
-                    onClick={() => handleShopClick(shop.id, shop.name)}
+                    onClick={() => handleShopClick(shop.id)}
                   />
                 </motion.div>
               ))
