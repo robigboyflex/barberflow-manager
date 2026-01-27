@@ -74,6 +74,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          payment_method: string | null
           price: number
           service_id: string
           shop_id: string
@@ -88,6 +89,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          payment_method?: string | null
           price: number
           service_id: string
           shop_id: string
@@ -102,6 +104,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          payment_method?: string | null
           price?: number
           service_id?: string
           shop_id?: string
@@ -327,6 +330,48 @@ export type Database = {
             columns: ["shop_id"]
             isOneToOne: false
             referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shifts: {
+        Row: {
+          clock_in: string
+          clock_out: string | null
+          created_at: string
+          id: string
+          shop_id: string
+          staff_id: string
+        }
+        Insert: {
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          id?: string
+          shop_id: string
+          staff_id: string
+        }
+        Update: {
+          clock_in?: string
+          clock_out?: string | null
+          created_at?: string
+          id?: string
+          shop_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shifts_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
