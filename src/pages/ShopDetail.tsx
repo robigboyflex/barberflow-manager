@@ -20,6 +20,8 @@ import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
 import AddShopModal from "@/components/AddShopModal";
 import EditStaffModal from "@/components/EditStaffModal";
+import EditServiceModal from "@/components/EditServiceModal";
+import { formatCurrency } from "@/lib/currency";
 
 interface Shop {
   id: string;
@@ -65,6 +67,8 @@ export default function ShopDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"staff" | "services">("staff");
 
   useEffect(() => {
@@ -292,7 +296,7 @@ export default function ShopDetail() {
               <h2 className="font-display text-lg">Services</h2>
               <Button
                 size="sm"
-                onClick={() => toast.info("Add service coming soon!")}
+                onClick={() => setIsAddServiceOpen(true)}
                 className="rounded-full gap-1.5 bg-primary/10 text-primary hover:bg-primary/20"
                 variant="ghost"
               >
@@ -319,13 +323,17 @@ export default function ShopDetail() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => setEditingService(service)}
                   className="mobile-card flex items-center justify-between cursor-pointer"
                 >
                   <div>
                     <p className="font-medium text-foreground">{service.name}</p>
                     <p className="text-sm text-muted-foreground">{service.duration_minutes} min</p>
                   </div>
-                  <p className="font-display text-xl text-primary">${service.price.toFixed(2)}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-display text-xl text-primary">{formatCurrency(service.price)}</p>
+                    <Edit2 className="w-4 h-4 text-muted-foreground" />
+                  </div>
                 </motion.div>
               ))
             )}
@@ -339,6 +347,19 @@ export default function ShopDetail() {
         onClose={() => setEditingStaff(null)}
         onSuccess={fetchShopData}
         staff={editingStaff}
+        shopName={shop.name}
+      />
+
+      {/* Edit Service Modal */}
+      <EditServiceModal
+        isOpen={!!editingService || isAddServiceOpen}
+        onClose={() => {
+          setEditingService(null);
+          setIsAddServiceOpen(false);
+        }}
+        onSuccess={fetchShopData}
+        service={editingService}
+        shopId={shop.id}
         shopName={shop.name}
       />
 

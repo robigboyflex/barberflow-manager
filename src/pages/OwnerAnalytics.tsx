@@ -11,7 +11,8 @@ import {
   ChevronDown,
   Award,
   Clock,
-  FileText
+  FileText,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +27,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import AnimatedPage from "@/components/AnimatedPage";
+import ReportDownloadModal from "@/components/ReportDownloadModal";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { formatCurrency } from "@/lib/currency";
 
 interface Shop {
   id: string;
@@ -66,6 +69,7 @@ export default function OwnerAnalytics() {
   });
   const [barberStats, setBarberStats] = useState<BarberStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
     fetchShops();
@@ -260,7 +264,7 @@ export default function OwnerAnalytics() {
                 <Skeleton className="h-10 w-32 bg-primary-foreground/20" />
               ) : (
                 <h2 className="text-4xl font-display text-primary-foreground">
-                  ${summary.netProfit.toFixed(2)}
+                  {formatCurrency(summary.netProfit)}
                 </h2>
               )}
             </div>
@@ -275,11 +279,11 @@ export default function OwnerAnalytics() {
           <div className="grid grid-cols-3 gap-4 text-primary-foreground/80 text-sm">
             <div>
               <p className="opacity-80">Revenue</p>
-              <p className="font-semibold text-primary-foreground">${summary.totalRevenue.toFixed(2)}</p>
+              <p className="font-semibold text-primary-foreground">{formatCurrency(summary.totalRevenue)}</p>
             </div>
             <div>
               <p className="opacity-80">Expenses</p>
-              <p className="font-semibold text-primary-foreground">-${summary.totalExpenses.toFixed(2)}</p>
+              <p className="font-semibold text-primary-foreground">-{formatCurrency(summary.totalExpenses)}</p>
             </div>
             <div>
               <p className="opacity-80">Cuts</p>
@@ -321,7 +325,7 @@ export default function OwnerAnalytics() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <p className="text-3xl font-display text-foreground">
-                ${summary.avgRevenuePerCut.toFixed(2)}
+                {formatCurrency(summary.avgRevenuePerCut)}
               </p>
             )}
           </motion.div>
@@ -402,7 +406,7 @@ export default function OwnerAnalytics() {
                     <p className="text-sm text-muted-foreground">{barber.cutsCount} cuts</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-display text-xl text-primary">${barber.revenue.toFixed(2)}</p>
+                    <p className="font-display text-xl text-primary">{formatCurrency(barber.revenue)}</p>
                   </div>
                 </motion.div>
               ))}
@@ -410,12 +414,20 @@ export default function OwnerAnalytics() {
           )}
         </motion.div>
 
-        {/* Audit Logs Link */}
+        {/* Download Report Button */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
+          className="space-y-3"
         >
+          <Button
+            onClick={() => setIsReportModalOpen(true)}
+            className="w-full h-12 rounded-xl gap-2 bg-gradient-gold text-primary-foreground"
+          >
+            <Download className="w-4 h-4" />
+            Download Report
+          </Button>
           <Button
             onClick={() => toast.info("Audit logs coming soon!")}
             variant="outline"
@@ -426,6 +438,16 @@ export default function OwnerAnalytics() {
           </Button>
         </motion.div>
       </div>
+
+      {/* Report Download Modal */}
+      {user && (
+        <ReportDownloadModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          shops={shops}
+          userId={user.id}
+        />
+      )}
     </AnimatedPage>
   );
 }

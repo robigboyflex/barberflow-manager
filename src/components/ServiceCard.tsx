@@ -3,6 +3,7 @@ import { Clock, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { fadeUpItem, cardTap } from "./AnimatedPage";
+import { formatCurrency } from "@/lib/currency";
 
 interface ServiceCardProps {
   name: string;
@@ -33,7 +34,7 @@ export default function ServiceCard({
       <div className="flex items-center gap-4">
         {/* Price badge */}
         <div className="w-16 h-16 rounded-2xl bg-gradient-gold flex flex-col items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-          <span className="text-xl font-display text-primary-foreground">${price}</span>
+          <span className="text-lg font-display text-primary-foreground">{formatCurrency(price)}</span>
         </div>
 
         {/* Content */}

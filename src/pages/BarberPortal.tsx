@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
 import { getUserFriendlyError, logError } from "@/lib/errorHandler";
+import { formatCurrency } from "@/lib/currency";
 
 interface Service {
   id: string;
@@ -272,7 +273,7 @@ export default function BarberPortal() {
                       }`}
                     >
                       <p className="font-medium text-foreground text-sm truncate">{service.name}</p>
-                      <p className="text-primary font-display">${service.price.toFixed(2)}</p>
+                      <p className="text-primary font-display">{formatCurrency(service.price)}</p>
                     </motion.button>
                   ))}
                 </div>
@@ -336,7 +337,7 @@ export default function BarberPortal() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-display text-lg text-primary">${cut.price.toFixed(2)}</p>
+                      <p className="font-display text-lg text-primary">{formatCurrency(cut.price)}</p>
                       <p className={`text-xs capitalize ${
                         cut.status === "confirmed" ? "text-success" :
                         cut.status === "disputed" ? "text-destructive" :
