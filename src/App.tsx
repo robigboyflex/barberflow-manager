@@ -11,6 +11,7 @@ import OwnerAnalytics from "./pages/OwnerAnalytics";
 import StaffLogin from "./pages/StaffLogin";
 import BarberPortal from "./pages/BarberPortal";
 import CashierPortal from "./pages/CashierPortal";
+import CleanerPortal from "./pages/CleanerPortal";
 import Appointments from "./pages/Appointments";
 import Clients from "./pages/Clients";
 import Services from "./pages/Services";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/staff-login" element={<StaffLogin />} />
             <Route path="/barber" element={<BarberPortal />} />
             <Route path="/cashier" element={<CashierPortal />} />
+            <Route path="/cleaner" element={<CleanerPortal />} />
             <Route path="/dashboard" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
               <Route path="shop/:shopId" element={<ShopDetail />} />
