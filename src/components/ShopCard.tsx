@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Store, Users, MapPin, DollarSign, TrendingUp, ChevronRight, Plus, Activity } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
 
 interface ShopCardProps {
   name: string;
@@ -52,7 +53,7 @@ export default function ShopCard({
         
         <div className="flex items-center gap-1.5">
           <DollarSign className="w-4 h-4 text-warning" />
-          <span className="text-sm text-muted-foreground">${todayRevenue.toFixed(2)} today</span>
+          <span className="text-sm text-muted-foreground">{formatCurrency(todayRevenue)} today</span>
         </div>
 
         {isLive && (

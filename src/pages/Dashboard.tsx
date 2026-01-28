@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useShops } from "@/hooks/useShops";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/currency";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -30,7 +31,7 @@ export default function Dashboard() {
                     'Owner';
 
   const handleRevenueClick = () => {
-    toast.info("Revenue details coming soon!");
+    navigate("/dashboard/analytics");
   };
 
   const handleShopsStatClick = () => {
@@ -67,7 +68,7 @@ export default function Dashboard() {
                 Today's Revenue
               </p>
               <h2 className="text-4xl font-display text-primary-foreground tracking-wide">
-                ${stats.todayRevenue.toFixed(2)}
+                {formatCurrency(stats.todayRevenue)}
               </h2>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center">
