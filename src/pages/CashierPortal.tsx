@@ -270,7 +270,7 @@ export default function CashierPortal() {
     <AnimatedPage>
       <div className="min-h-screen bg-background pb-8">
         {/* Header */}
-        <header className="px-5 py-4 safe-area-top">
+        <header className="bg-background px-5 py-4 sticky top-0 z-40 safe-area-top">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">{staff.shop?.name}</p>
