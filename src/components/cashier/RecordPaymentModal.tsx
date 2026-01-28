@@ -185,143 +185,146 @@ export default function RecordPaymentModal({
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="w-full max-w-lg bg-card rounded-t-3xl p-6 space-y-5"
+          className="w-full max-w-lg bg-card rounded-t-3xl max-h-[90vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-display text-foreground">Record Payment</h2>
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={onClose}
-              className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+          {/* Scrollable content wrapper */}
+          <div className="overflow-y-auto flex-1 p-6 space-y-5 safe-area-bottom">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-display text-foreground">Record Payment</h2>
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center"
+              >
+                <X className="w-5 h-5 text-muted-foreground" />
+              </motion.button>
+            </div>
+
+            {/* Customer Name */}
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Customer Name</Label>
+              <Input
+                placeholder="Enter customer name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="h-12 rounded-xl bg-muted border-0"
+              />
+            </div>
+
+            {/* Select Barber */}
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Select Barber</Label>
+              <div className="flex flex-wrap gap-2">
+                {barbers.map((barber) => (
+                  <motion.button
+                    key={barber.id}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setSelectedBarber(barber.id)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                      selectedBarber === barber.id
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {barber.name}
+                  </motion.button>
+                ))}
+                {barbers.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No barbers available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Service Selection */}
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Service</Label>
+              <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
+                {services.map((service) => (
+                  <motion.button
+                    key={service.id}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleServiceSelect(service.id)}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
+                      selectedService === service.id
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {service.name}
+                  </motion.button>
+                ))}
+                {services.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No services available</p>
+                )}
+              </div>
+            </div>
+
+            {/* Price */}
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Price (GH₵)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="h-14 rounded-xl bg-muted border-0 text-center text-2xl font-display"
+              />
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">Payment Method</Label>
+              <div className="grid grid-cols-3 gap-3">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setPaymentMethod("cash")}
+                  className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-colors ${
+                    paymentMethod === "cash"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <Banknote className="w-6 h-6" />
+                  <span className="text-sm font-medium">Cash</span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setPaymentMethod("card")}
+                  className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-colors ${
+                    paymentMethod === "card"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <CreditCard className="w-6 h-6" />
+                  <span className="text-sm font-medium">Card</span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setPaymentMethod("momo")}
+                  className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-colors ${
+                    paymentMethod === "momo"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <Smartphone className="w-6 h-6" />
+                  <span className="text-sm font-medium">MoMo</span>
+                </motion.button>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !selectedBarber || !selectedService}
+              className="w-full h-14 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-lg font-medium"
             >
-              <X className="w-5 h-5 text-muted-foreground" />
-            </motion.button>
+              {isSubmitting ? "Recording..." : "Record Service"}
+            </Button>
           </div>
-
-          {/* Customer Name */}
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">Customer Name</Label>
-            <Input
-              placeholder="Enter customer name"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="h-12 rounded-xl bg-muted border-0"
-            />
-          </div>
-
-          {/* Select Barber */}
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">Select Barber</Label>
-            <div className="flex flex-wrap gap-2">
-              {barbers.map((barber) => (
-                <motion.button
-                  key={barber.id}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedBarber(barber.id)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-                    selectedBarber === barber.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {barber.name}
-                </motion.button>
-              ))}
-              {barbers.length === 0 && (
-                <p className="text-sm text-muted-foreground">No barbers available</p>
-              )}
-            </div>
-          </div>
-
-          {/* Service Selection */}
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">Service</Label>
-            <div className="flex flex-wrap gap-2 overflow-x-auto pb-2">
-              {services.map((service) => (
-                <motion.button
-                  key={service.id}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleServiceSelect(service.id)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
-                    selectedService === service.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {service.name}
-                </motion.button>
-              ))}
-              {services.length === 0 && (
-                <p className="text-sm text-muted-foreground">No services available</p>
-              )}
-            </div>
-          </div>
-
-          {/* Price */}
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">Price (GH₵)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="h-14 rounded-xl bg-muted border-0 text-center text-2xl font-display"
-            />
-          </div>
-
-          {/* Payment Method */}
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">Payment Method</Label>
-            <div className="grid grid-cols-3 gap-3">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setPaymentMethod("cash")}
-                className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-colors ${
-                  paymentMethod === "cash"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                <Banknote className="w-6 h-6" />
-                <span className="text-sm font-medium">Cash</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setPaymentMethod("card")}
-                className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-colors ${
-                  paymentMethod === "card"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                <CreditCard className="w-6 h-6" />
-                <span className="text-sm font-medium">Card</span>
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setPaymentMethod("momo")}
-                className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-colors ${
-                  paymentMethod === "momo"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                <Smartphone className="w-6 h-6" />
-                <span className="text-sm font-medium">MoMo</span>
-              </motion.button>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !selectedBarber || !selectedService}
-            className="w-full h-14 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-lg font-medium"
-          >
-            {isSubmitting ? "Recording..." : "Record Service"}
-          </Button>
         </motion.div>
       </motion.div>
     </AnimatePresence>
