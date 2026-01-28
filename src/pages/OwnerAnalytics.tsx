@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   TrendingUp, 
@@ -12,7 +13,8 @@ import {
   Award,
   Clock,
   FileText,
-  Download
+  Download,
+  ArrowLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,6 +58,7 @@ type TimePeriod = "today" | "week" | "month" | "year";
 const COLORS = ["hsl(43, 96%, 56%)", "hsl(142, 76%, 36%)", "hsl(38, 92%, 50%)", "hsl(0, 72%, 51%)"];
 
 export default function OwnerAnalytics() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShop, setSelectedShop] = useState<string>("all");
@@ -220,6 +223,19 @@ export default function OwnerAnalytics() {
   return (
     <AnimatedPage>
       <div className="space-y-5 pb-8">
+        {/* Header with Back Button */}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/dashboard")}
+            className="rounded-full"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="font-display text-2xl tracking-wide">Analytics</h1>
+        </div>
+
         {/* Filters */}
         <div className="flex gap-3">
           <Select value={selectedShop} onValueChange={setSelectedShop}>

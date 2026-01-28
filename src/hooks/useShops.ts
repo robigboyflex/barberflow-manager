@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
+import { useEffect } from "react";
 
 export interface Shop {
   id: string;
@@ -29,6 +30,32 @@ export interface ShopWithStats extends Shop {
 
 export function useShops() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Set up realtime subscription for cuts
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('cuts-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cuts',
+        },
+        () => {
+          // Invalidate shops query to refetch with updated revenue
+          queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   return useQuery({
     queryKey: ["shops", user?.id],
@@ -55,17 +82,40 @@ export function useShops() {
 
       if (staffError) throw staffError;
 
+      // Get today's date range
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+
+      // Fetch today's confirmed cuts for each shop
+      const { data: cutsData, error: cutsError } = await supabase
+        .from("cuts")
+        .select("shop_id, price, status")
+        .in("shop_id", shopIds)
+        .gte("created_at", todayStart.toISOString())
+        .lte("created_at", todayEnd.toISOString())
+        .eq("status", "confirmed");
+
+      if (cutsError) throw cutsError;
+
       // Count staff per shop
       const staffCountMap: Record<string, number> = {};
       staffData?.forEach(s => {
         staffCountMap[s.shop_id] = (staffCountMap[s.shop_id] || 0) + 1;
       });
 
+      // Calculate revenue per shop
+      const revenueMap: Record<string, number> = {};
+      cutsData?.forEach(c => {
+        revenueMap[c.shop_id] = (revenueMap[c.shop_id] || 0) + Number(c.price);
+      });
+
       // Combine data
       return shops.map(shop => ({
         ...shop,
         staffCount: staffCountMap[shop.id] || 0,
-        todayRevenue: 0, // Will implement with transactions table later
+        todayRevenue: revenueMap[shop.id] || 0,
       }));
     },
     enabled: !!user,
