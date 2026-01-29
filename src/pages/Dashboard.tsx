@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import AnimatedPage from "@/components/AnimatedPage";
 import ShopCard, { AddShopButton } from "@/components/ShopCard";
 import AddShopModal from "@/components/AddShopModal";
+import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import { useAuth } from "@/hooks/useAuth";
 import { useShops } from "@/hooks/useShops";
 import { toast } from "sonner";
@@ -177,6 +178,17 @@ export default function Dashboard() {
             )}
           </motion.div>
         </div>
+
+        {/* Live Activity Feed */}
+        {user && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <ActivityFeed ownerId={user.id} limit={15} />
+          </motion.div>
+        )}
       </div>
 
       {/* Add Shop Modal */}
