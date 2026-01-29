@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { 
   TrendingUp, 
   TrendingDown,
@@ -8,7 +9,7 @@ import {
   Scissors, 
   Users, 
   Store,
-  Calendar,
+  Calendar as CalendarIcon,
   ChevronDown,
   Award,
   Clock,
@@ -25,6 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,6 +39,7 @@ import AnimatedPage from "@/components/AnimatedPage";
 import ReportDownloadModal from "@/components/ReportDownloadModal";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { formatCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 
 interface Shop {
   id: string;
@@ -53,7 +61,12 @@ interface AnalyticsSummary {
   avgRevenuePerCut: number;
 }
 
-type TimePeriod = "today" | "week" | "month" | "year";
+type TimePeriod = "today" | "week" | "month" | "year" | "custom";
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
+}
 
 const COLORS = ["hsl(43, 96%, 56%)", "hsl(142, 76%, 36%)", "hsl(38, 92%, 50%)", "hsl(0, 72%, 51%)"];
 
@@ -63,6 +76,7 @@ export default function OwnerAnalytics() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShop, setSelectedShop] = useState<string>("all");
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("today");
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
   const [summary, setSummary] = useState<AnalyticsSummary>({
     totalRevenue: 0,
     totalExpenses: 0,
@@ -80,9 +94,12 @@ export default function OwnerAnalytics() {
 
   useEffect(() => {
     if (shops.length > 0 || selectedShop === "all") {
-      fetchAnalytics();
+      // Only fetch if not custom, or if custom has valid date range
+      if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
+        fetchAnalytics();
+      }
     }
-  }, [selectedShop, timePeriod, shops]);
+  }, [selectedShop, timePeriod, shops, dateRange]);
 
   const fetchShops = async () => {
     if (!user) return;
@@ -101,7 +118,7 @@ export default function OwnerAnalytics() {
     }
   };
 
-  const getDateRange = (period: TimePeriod) => {
+  const getDateRangeForPeriod = (period: TimePeriod) => {
     const now = new Date();
     const start = new Date();
     
@@ -118,6 +135,15 @@ export default function OwnerAnalytics() {
       case "year":
         start.setFullYear(now.getFullYear() - 1);
         break;
+      case "custom":
+        if (dateRange.from && dateRange.to) {
+          const customStart = new Date(dateRange.from);
+          customStart.setHours(0, 0, 0, 0);
+          const customEnd = new Date(dateRange.to);
+          customEnd.setHours(23, 59, 59, 999);
+          return { start: customStart.toISOString(), end: customEnd.toISOString() };
+        }
+        return { start: start.toISOString(), end: now.toISOString() };
     }
     
     return { start: start.toISOString(), end: now.toISOString() };
@@ -128,7 +154,7 @@ export default function OwnerAnalytics() {
     setIsLoading(true);
 
     try {
-      const { start, end } = getDateRange(timePeriod);
+      const { start, end } = getDateRangeForPeriod(timePeriod);
       const shopIds = selectedShop === "all" ? shops.map((s) => s.id) : [selectedShop];
 
       if (shopIds.length === 0) {
@@ -255,7 +281,7 @@ export default function OwnerAnalytics() {
 
           <Select value={timePeriod} onValueChange={(v: TimePeriod) => setTimePeriod(v)}>
             <SelectTrigger className="w-32 h-12 rounded-xl">
-              <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+              <CalendarIcon className="w-4 h-4 mr-2 text-muted-foreground" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -263,9 +289,68 @@ export default function OwnerAnalytics() {
               <SelectItem value="week">Week</SelectItem>
               <SelectItem value="month">Month</SelectItem>
               <SelectItem value="year">Year</SelectItem>
+              <SelectItem value="custom">Custom</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
+        {/* Custom Date Range Picker */}
+        {timePeriod === "custom" && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex gap-3"
+          >
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "flex-1 h-12 rounded-xl justify-start text-left font-normal",
+                    !dateRange.from && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "Start date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateRange.from}
+                  onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date }))}
+                  disabled={(date) => date > new Date() || (dateRange.to ? date > dateRange.to : false)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "flex-1 h-12 rounded-xl justify-start text-left font-normal",
+                    !dateRange.to && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.to ? format(dateRange.to, "MMM d, yyyy") : "End date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateRange.to}
+                  onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
+                  disabled={(date) => date > new Date() || (dateRange.from ? date < dateRange.from : false)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </motion.div>
+        )}
 
         {/* Revenue Summary */}
         <motion.div
