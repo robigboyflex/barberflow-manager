@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { Scissors } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import iconicBarberLogo from "@/assets/iconic-barber-logo.jpg";
 
 const features = [
   "Manage multiple shop locations",
@@ -19,9 +19,9 @@ export default function Welcome() {
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", duration: 0.6 }}
-        className="w-32 h-32 rounded-3xl bg-gradient-gold flex items-center justify-center shadow-xl shadow-primary/30 mb-8"
+        className="w-32 h-32 rounded-full overflow-hidden shadow-xl shadow-primary/30 mb-8"
       >
-        <Scissors className="w-16 h-16 text-primary-foreground" strokeWidth={1.5} />
+        <img src={iconicBarberLogo} alt="Iconic Barber Logo" className="w-full h-full object-cover" />
       </motion.div>
 
       {/* Title */}
@@ -31,7 +31,7 @@ export default function Welcome() {
         transition={{ delay: 0.2 }}
         className="text-4xl md:text-5xl font-display tracking-wide text-foreground mb-2"
       >
-        BarberFlow
+        Iconic Barber
       </motion.h1>
 
       <motion.p
