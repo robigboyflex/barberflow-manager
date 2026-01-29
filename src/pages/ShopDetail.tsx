@@ -216,7 +216,7 @@ export default function ShopDetail() {
             variant="ghost"
             size="icon"
             className="rounded-full"
-            onClick={() => toast.info("Shop settings coming soon!")}
+            onClick={() => navigate(`/dashboard/shop/${shopId}/settings`)}
           >
             <Settings className="w-5 h-5" />
           </Button>
