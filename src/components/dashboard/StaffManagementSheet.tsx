@@ -19,6 +19,7 @@ interface StaffMember {
   role: "barber" | "cashier" | "cleaner";
   shop_id: string;
   is_active: boolean;
+  pin: string;
 }
 
 interface StaffManagementSheetProps {
@@ -64,7 +65,7 @@ export default function StaffManagementSheet({
       const shopIds = shops.map((s) => s.id);
       const { data, error } = await supabase
         .from("staff")
-        .select("id, name, role, shop_id, is_active")
+        .select("id, name, role, shop_id, is_active, pin")
         .in("shop_id", shopIds)
         .eq("is_active", true)
         .order("name");
@@ -155,7 +156,7 @@ export default function StaffManagementSheet({
                         const Icon = roleIcons[staff.role];
                         const colorClass = roleColors[staff.role];
                         
-                        return (
+                          return (
                           <div
                             key={staff.id}
                             className="flex items-center justify-between py-2"
@@ -164,6 +165,9 @@ export default function StaffManagementSheet({
                               <Icon className={`w-4 h-4 ${colorClass}`} />
                               <span className="text-sm text-foreground">
                                 {staff.name}
+                              </span>
+                              <span className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded text-muted-foreground">
+                                PIN: {staff.pin}
                               </span>
                             </div>
                             <span className="text-xs text-muted-foreground capitalize">

@@ -7,19 +7,30 @@ import {
   MapPin, 
   Users, 
   Plus, 
-  Edit2, 
+  Trash2, 
   Scissors, 
   DollarSign, 
   Briefcase,
-  Settings
+  Settings,
+  Edit2,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
 import AddShopModal from "@/components/AddShopModal";
-import EditStaffModal from "@/components/EditStaffModal";
 import EditServiceModal from "@/components/EditServiceModal";
 import { formatCurrency } from "@/lib/currency";
 
@@ -66,7 +77,8 @@ export default function ShopDetail() {
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [deletingStaff, setDeletingStaff] = useState<Staff | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"staff" | "services">("staff");
@@ -124,8 +136,32 @@ export default function ShopDetail() {
     setIsAddStaffOpen(true);
   };
 
-  const handleEditStaff = (staffMember: Staff) => {
-    setEditingStaff(staffMember);
+  const handleDeleteStaff = (staffMember: Staff) => {
+    setDeletingStaff(staffMember);
+  };
+
+  const confirmDeleteStaff = async () => {
+    if (!deletingStaff) return;
+
+    setIsDeleting(true);
+
+    try {
+      const { error } = await supabase
+        .from("staff")
+        .delete()
+        .eq("id", deletingStaff.id);
+
+      if (error) throw error;
+
+      toast.success(`${deletingStaff.name} has been removed`);
+      setDeletingStaff(null);
+      fetchShopData();
+    } catch (error: any) {
+      console.error("Error deleting staff:", error);
+      toast.error(error.message || "Failed to delete staff");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (isLoading) {
@@ -271,7 +307,7 @@ export default function ShopDetail() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => handleEditStaff(member)}
+                    onClick={() => handleDeleteStaff(member)}
                     className="mobile-card flex items-center gap-3 cursor-pointer"
                   >
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${roleColors[member.role]}`}>
@@ -281,7 +317,7 @@ export default function ShopDetail() {
                       <p className="font-medium text-foreground">{member.name}</p>
                       <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
                     </div>
-                    <Edit2 className="w-4 h-4 text-muted-foreground" />
+                    <Trash2 className="w-4 h-4 text-destructive" />
                   </motion.div>
                 );
               })
@@ -341,14 +377,32 @@ export default function ShopDetail() {
         )}
       </div>
 
-      {/* Edit Staff Modal */}
-      <EditStaffModal
-        isOpen={!!editingStaff}
-        onClose={() => setEditingStaff(null)}
-        onSuccess={fetchShopData}
-        staff={editingStaff}
-        shopName={shop.name}
-      />
+      {/* Delete Staff Confirmation Dialog */}
+      <AlertDialog open={!!deletingStaff} onOpenChange={() => setDeletingStaff(null)}>
+        <AlertDialogContent className="bg-card border-border rounded-2xl">
+          <AlertDialogHeader>
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-2">
+              <AlertTriangle className="w-6 h-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center">Remove {deletingStaff?.name}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              This action cannot be undone. All data associated with this staff member will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-col gap-2">
+            <AlertDialogAction
+              onClick={confirmDeleteStaff}
+              disabled={isDeleting}
+              className="w-full h-12 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Removing..." : "Yes, Remove"}
+            </AlertDialogAction>
+            <AlertDialogCancel className="w-full h-12 rounded-xl mt-0">
+              Cancel
+            </AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Edit Service Modal */}
       <EditServiceModal
