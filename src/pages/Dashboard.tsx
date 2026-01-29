@@ -6,9 +6,10 @@ import AnimatedPage from "@/components/AnimatedPage";
 import ShopCard, { AddShopButton } from "@/components/ShopCard";
 import AddShopModal from "@/components/AddShopModal";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
+import ShopsManagementSheet from "@/components/dashboard/ShopsManagementSheet";
+import StaffManagementSheet from "@/components/dashboard/StaffManagementSheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useShops } from "@/hooks/useShops";
-import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/currency";
 
@@ -16,6 +17,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isAddShopOpen, setIsAddShopOpen] = useState(false);
+  const [isShopsSheetOpen, setIsShopsSheetOpen] = useState(false);
+  const [isStaffSheetOpen, setIsStaffSheetOpen] = useState(false);
   
   const { data: shops, isLoading, refetch } = useShops();
 
@@ -36,11 +39,11 @@ export default function Dashboard() {
   };
 
   const handleShopsStatClick = () => {
-    toast.info("Shops management coming soon!");
+    setIsShopsSheetOpen(true);
   };
 
   const handleStaffStatClick = () => {
-    toast.info("Staff management coming soon!");
+    setIsStaffSheetOpen(true);
   };
 
   const handleAddShop = () => {
@@ -196,6 +199,23 @@ export default function Dashboard() {
         isOpen={isAddShopOpen}
         onClose={() => setIsAddShopOpen(false)}
         onSuccess={() => refetch()}
+      />
+
+      {/* Shops Management Sheet */}
+      <ShopsManagementSheet
+        isOpen={isShopsSheetOpen}
+        onClose={() => setIsShopsSheetOpen(false)}
+        shops={shops}
+        isLoading={isLoading}
+        onAddShop={handleAddShop}
+      />
+
+      {/* Staff Management Sheet */}
+      <StaffManagementSheet
+        isOpen={isStaffSheetOpen}
+        onClose={() => setIsStaffSheetOpen(false)}
+        shops={shops}
+        isLoading={isLoading}
       />
     </AnimatedPage>
   );
