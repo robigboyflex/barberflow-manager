@@ -12,6 +12,11 @@ export function getUserFriendlyError(error: unknown, context: string): string {
     return 'Too many attempts. Please try again in a few minutes.';
   }
 
+  // Session errors (check before generic permission errors)
+  if (isSessionExpiredError(error)) {
+    return 'Your session has expired. Please log in again.';
+  }
+
   // Permission errors
   if (
     errorMessage.includes('permission_denied') ||
@@ -20,15 +25,6 @@ export function getUserFriendlyError(error: unknown, context: string): string {
     errorMessage.includes('permission denied')
   ) {
     return 'You do not have permission to perform this action.';
-  }
-
-  // Session errors
-  if (
-    errorMessage.includes('session expired') ||
-    errorMessage.includes('invalid session') ||
-    errorMessage.includes('session_expired')
-  ) {
-    return 'Your session has expired. Please log in again.';
   }
 
   // Duplicate/unique constraint errors
@@ -100,6 +96,23 @@ export function getUserFriendlyError(error: unknown, context: string): string {
 
   // Default safe message
   return `Unable to ${context}. Please try again or contact support.`;
+}
+
+/**
+ * Detect session-expired errors across our RPCs.
+ */
+export function isSessionExpiredError(error: unknown): boolean {
+  const msg = extractErrorMessage(error).toLowerCase();
+
+  return (
+    msg.includes('session expired') ||
+    msg.includes('expired session') ||
+    msg.includes('invalid session') ||
+    msg.includes('invalid or expired session') ||
+    msg.includes('session_expired') ||
+    // Some RPCs prefix errors
+    msg.includes('permission_denied: session')
+  );
 }
 
 /**

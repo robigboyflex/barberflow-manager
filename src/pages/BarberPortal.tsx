@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
-import { getUserFriendlyError, logError } from "@/lib/errorHandler";
+import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 import { formatCurrency } from "@/lib/currency";
 
 interface Service {
@@ -122,6 +122,12 @@ export default function BarberPortal() {
 
     } catch (error) {
       logError('BarberPortal.fetchData', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'load data'));
+        logout();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'load data'));
     } finally {
       setIsLoading(false);
@@ -152,6 +158,12 @@ export default function BarberPortal() {
       fetchData();
     } catch (error) {
       logError('BarberPortal.handleLogCut', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'log cut'));
+        logout();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'log cut'));
     } finally {
       setIsLoggingCut(false);

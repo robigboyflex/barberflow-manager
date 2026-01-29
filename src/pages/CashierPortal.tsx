@@ -14,7 +14,7 @@ import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
 import CloseShiftModal from "@/components/cashier/CloseShiftModal";
-import { getUserFriendlyError, logError } from "@/lib/errorHandler";
+import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 
 interface ActivityItem {
   id: string;
@@ -192,6 +192,12 @@ export default function CashierPortal() {
       }
     } catch (error) {
       logError('CashierPortal.fetchData', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'load data'));
+        logout();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'load data'));
     } finally {
       setIsLoading(false);
@@ -224,6 +230,12 @@ export default function CashierPortal() {
       fetchData();
     } catch (error) {
       logError('CashierPortal.handleClockIn', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'clock in'));
+        logout();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'clock in'));
     }
   };
