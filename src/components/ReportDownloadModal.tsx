@@ -437,65 +437,67 @@ export default function ReportDownloadModal({
             </div>
 
             {/* Custom Date Range Picker */}
-            {timePeriod === "custom" && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-2"
-              >
-                <Label>Select Date Range</Label>
-                <div className="flex gap-3">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "flex-1 h-12 rounded-xl justify-start text-left font-normal",
-                          !dateRange.from && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "Start date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-[100]" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dateRange.from}
-                        onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date }))}
-                        disabled={(date) => date > new Date() || (dateRange.to ? date > dateRange.to : false)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+            <AnimatePresence>
+              {timePeriod === "custom" && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <Label>Select Date Range</Label>
+                  <div className="flex gap-3">
+                    <Popover modal={true}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "flex-1 h-12 rounded-xl justify-start text-left font-normal",
+                            !dateRange.from && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "Start date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-[200]" align="start" sideOffset={5}>
+                        <Calendar
+                          mode="single"
+                          selected={dateRange.from}
+                          onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date }))}
+                          disabled={(date) => date > new Date() || (dateRange.to ? date > dateRange.to : false)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
 
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "flex-1 h-12 rounded-xl justify-start text-left font-normal",
-                          !dateRange.to && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateRange.to ? format(dateRange.to, "MMM d, yyyy") : "End date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 z-[100]" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={dateRange.to}
-                        onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
-                        disabled={(date) => date > new Date() || (dateRange.from ? date < dateRange.from : false)}
-                        initialFocus
+                    <Popover modal={true}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "flex-1 h-12 rounded-xl justify-start text-left font-normal",
+                            !dateRange.to && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateRange.to ? format(dateRange.to, "MMM d, yyyy") : "End date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-[200]" align="start" sideOffset={5}>
+                        <Calendar
+                          mode="single"
+                          selected={dateRange.to}
+                          onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
+                          disabled={(date) => date > new Date() || (dateRange.from ? date < dateRange.from : false)}
+                          initialFocus
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
               </motion.div>
-            )}
+              )}
+            </AnimatePresence>
 
             <div className="space-y-2">
               <Label>File Format</Label>
