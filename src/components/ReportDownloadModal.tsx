@@ -459,7 +459,7 @@ export default function ReportDownloadModal({
                         {dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "Start date"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-[100]" align="start">
                       <Calendar
                         mode="single"
                         selected={dateRange.from}
@@ -483,7 +483,7 @@ export default function ReportDownloadModal({
                         {dateRange.to ? format(dateRange.to, "MMM d, yyyy") : "End date"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-[100]" align="start">
                       <Calendar
                         mode="single"
                         selected={dateRange.to}
