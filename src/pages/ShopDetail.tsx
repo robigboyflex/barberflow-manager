@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import AnimatedPage from "@/components/AnimatedPage";
 import AddShopModal from "@/components/AddShopModal";
 import EditServiceModal from "@/components/EditServiceModal";
+import QRCodeGenerator from "@/components/QRCodeGenerator";
 import { formatCurrency } from "@/lib/currency";
 
 interface Shop {
@@ -212,6 +213,7 @@ export default function ShopDetail() {
               <span className="text-sm">{shop.location}</span>
             </div>
           </div>
+          <QRCodeGenerator shopId={shop.id} shopName={shop.name} />
           <Button
             variant="ghost"
             size="icon"
