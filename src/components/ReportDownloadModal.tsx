@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import { X, Download, FileText, FileSpreadsheet, Calendar as CalendarIcon } from "lucide-react";
+import { X, Download, FileText, FileSpreadsheet, Calendar as CalendarIcon, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -535,7 +535,7 @@ export default function ReportDownloadModal({
                       : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  <Calendar className="w-6 h-6" />
+                  <File className="w-6 h-6" />
                   <span className="text-sm font-medium">CSV</span>
                 </motion.button>
               </div>
