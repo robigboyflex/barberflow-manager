@@ -15,6 +15,7 @@ import CleanerPortal from "./pages/CleanerPortal";
 import Appointments from "./pages/Appointments";
 import Clients from "./pages/Clients";
 import Services from "./pages/Services";
+import BookAppointment from "./pages/BookAppointment";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/barber" element={<BarberPortal />} />
             <Route path="/cashier" element={<CashierPortal />} />
             <Route path="/cleaner" element={<CleanerPortal />} />
+            <Route path="/book/:shopId" element={<BookAppointment />} />
             <Route path="/dashboard" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
               <Route path="shop/:shopId" element={<ShopDetail />} />

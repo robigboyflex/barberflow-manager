@@ -65,6 +65,92 @@ export type Database = {
           },
         ]
       }
+      appointments: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          notes: string | null
+          payment_amount: number | null
+          payment_method: string | null
+          preferred_barber_id: string | null
+          preferred_date: string
+          preferred_time: string
+          service_id: string | null
+          shop_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          notes?: string | null
+          payment_amount?: number | null
+          payment_method?: string | null
+          preferred_barber_id?: string | null
+          preferred_date: string
+          preferred_time: string
+          service_id?: string | null
+          shop_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          notes?: string | null
+          payment_amount?: number | null
+          payment_method?: string | null
+          preferred_barber_id?: string | null
+          preferred_date?: string
+          preferred_time?: string
+          service_id?: string | null
+          shop_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_preferred_barber_id_fkey"
+            columns: ["preferred_barber_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -609,6 +695,16 @@ export type Database = {
         }
         Returns: Json
       }
+      confirm_appointment_payment: {
+        Args: {
+          p_appointment_id: string
+          p_cashier_id: string
+          p_payment_amount: number
+          p_payment_method?: string
+          p_session_token?: string
+        }
+        Returns: string
+      }
       confirm_cut: {
         Args: {
           p_cashier_id: string
@@ -658,6 +754,22 @@ export type Database = {
           staff_id: string
           staff_name: string
           staff_role: string
+        }[]
+      }
+      get_shop_appointments: {
+        Args: { p_date?: string; p_session_token: string; p_staff_id: string }
+        Returns: {
+          created_at: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          notes: string
+          preferred_barber: string
+          preferred_date: string
+          preferred_time: string
+          service_name: string
+          service_price: number
+          status: string
         }[]
       }
       get_shop_barbers: {

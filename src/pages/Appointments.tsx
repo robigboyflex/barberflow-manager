@@ -1,85 +1,159 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Calendar, Phone, User, Clock, Check, X, Store } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import AppointmentCard from "@/components/AppointmentCard";
-import AnimatedPage, { staggerContainer } from "@/components/AnimatedPage";
-import type { AppointmentStatus } from "@/types/barberflow";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import AnimatedPage from "@/components/AnimatedPage";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { format, addDays, subDays } from "date-fns";
+import { cn } from "@/lib/utils";
 
-// Mock data for demo
-const mockAppointments = [
-  {
-    id: "1",
-    clientName: "John Smith",
-    serviceName: "Haircut & Beard",
-    time: "10:30 AM",
-    duration: 45,
-    status: "completed" as AppointmentStatus,
-    barberName: "Mike",
-  },
-  {
-    id: "2",
-    clientName: "Alex Johnson",
-    serviceName: "Haircut",
-    time: "11:15 AM",
-    duration: 30,
-    status: "in_progress" as AppointmentStatus,
-    barberName: "Mike",
-  },
-  {
-    id: "3",
-    clientName: "David Brown",
-    serviceName: "Hot Towel Shave",
-    time: "12:00 PM",
-    duration: 30,
-    status: "confirmed" as AppointmentStatus,
-    barberName: "James",
-  },
-  {
-    id: "4",
-    clientName: "Chris Wilson",
-    serviceName: "Hair Design",
-    time: "1:00 PM",
-    duration: 45,
-    status: "scheduled" as AppointmentStatus,
-    barberName: "Mike",
-  },
-  {
-    id: "5",
-    clientName: "Tom Davis",
-    serviceName: "Beard Trim",
-    time: "2:00 PM",
-    duration: 20,
-    status: "scheduled" as AppointmentStatus,
-    barberName: "James",
-  },
-  {
-    id: "6",
-    clientName: "Ryan Miller",
-    serviceName: "Kids Haircut",
-    time: "3:00 PM",
-    duration: 20,
-    status: "cancelled" as AppointmentStatus,
-    barberName: "Mike",
-  },
-];
+interface Appointment {
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  preferred_date: string;
+  preferred_time: string;
+  notes: string | null;
+  status: string;
+  created_at: string;
+  service: { name: string; price: number } | null;
+  barber: { name: string } | null;
+  shop: { id: string; name: string };
+}
 
-const tabs = ["All", "Upcoming", "Completed"];
+interface Shop {
+  id: string;
+  name: string;
+}
+
+const tabs = ["All", "Pending", "Completed", "Cancelled"];
+
+const statusColors: Record<string, string> = {
+  pending: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+  confirmed: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  completed: "bg-green-500/10 text-green-500 border-green-500/20",
+  cancelled: "bg-destructive/10 text-destructive border-destructive/20",
+  no_show: "bg-muted text-muted-foreground border-muted",
+};
 
 export default function Appointments() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All");
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [selectedShop, setSelectedShop] = useState<string>("all");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredAppointments = mockAppointments.filter((apt) => {
+  useEffect(() => {
+    if (user) {
+      fetchShops();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchAppointments();
+    }
+  }, [user, selectedDate, selectedShop]);
+
+  const fetchShops = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("shops")
+        .select("id, name")
+        .eq("owner_id", user?.id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setShops(data || []);
+    } catch (error) {
+      console.error("Error fetching shops:", error);
+    }
+  };
+
+  const fetchAppointments = async () => {
+    setIsLoading(true);
+    try {
+      let query = supabase
+        .from("appointments")
+        .select(`
+          id,
+          customer_name,
+          customer_phone,
+          preferred_date,
+          preferred_time,
+          notes,
+          status,
+          created_at,
+          service:services(name, price),
+          barber:staff!preferred_barber_id(name),
+          shop:shops!inner(id, name)
+        `)
+        .eq("preferred_date", format(selectedDate, "yyyy-MM-dd"))
+        .order("preferred_time", { ascending: true });
+
+      if (selectedShop !== "all") {
+        query = query.eq("shop_id", selectedShop);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setAppointments(data || []);
+    } catch (error) {
+      console.error("Error fetching appointments:", error);
+      toast.error("Failed to load appointments");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelAppointment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success("Appointment cancelled");
+      fetchAppointments();
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
+      toast.error("Failed to cancel appointment");
+    }
+  };
+
+  const filteredAppointments = appointments.filter((apt) => {
     const matchesSearch =
-      apt.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.serviceName.toLowerCase().includes(searchQuery.toLowerCase());
+      apt.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.customer_phone.includes(searchQuery) ||
+      apt.service?.name.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (activeTab === "All") return matchesSearch;
-    if (activeTab === "Upcoming") return matchesSearch && ["scheduled", "confirmed"].includes(apt.status);
+    if (activeTab === "Pending") return matchesSearch && apt.status === "pending";
     if (activeTab === "Completed") return matchesSearch && apt.status === "completed";
+    if (activeTab === "Cancelled") return matchesSearch && (apt.status === "cancelled" || apt.status === "no_show");
     return matchesSearch;
   });
+
+  const goToPreviousDay = () => setSelectedDate(subDays(selectedDate, 1));
+  const goToNextDay = () => setSelectedDate(addDays(selectedDate, 1));
 
   return (
     <AnimatedPage>
@@ -90,13 +164,23 @@ export default function Appointments() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <h1 className="font-display text-2xl tracking-wide">Bookings</h1>
-          <motion.button
-            className="w-11 h-11 rounded-2xl bg-gradient-gold flex items-center justify-center shadow-lg shadow-primary/20"
-            whileTap={{ scale: 0.9 }}
-          >
-            <Plus className="w-5 h-5 text-primary-foreground" />
-          </motion.button>
+          <h1 className="font-display text-2xl tracking-wide">Appointments</h1>
+          {shops.length > 1 && (
+            <Select value={selectedShop} onValueChange={setSelectedShop}>
+              <SelectTrigger className="w-[180px]">
+                <Store className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="All shops" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Shops</SelectItem>
+                {shops.map((shop) => (
+                  <SelectItem key={shop.id} value={shop.id}>
+                    {shop.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </motion.div>
 
         {/* Date Selector */}
@@ -106,14 +190,40 @@ export default function Appointments() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <motion.button whileTap={{ scale: 0.9 }} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+          <motion.button 
+            onClick={goToPreviousDay}
+            whileTap={{ scale: 0.9 }} 
+            className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center"
+          >
             <ChevronLeft className="w-5 h-5 text-muted-foreground" />
           </motion.button>
-          <div className="text-center">
-            <p className="font-semibold">Today</p>
-            <p className="text-sm text-muted-foreground">January 22, 2026</p>
-          </div>
-          <motion.button whileTap={{ scale: 0.9 }} className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" className="text-center">
+                <div>
+                  <p className="font-semibold">
+                    {format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") 
+                      ? "Today" 
+                      : format(selectedDate, "EEEE")}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{format(selectedDate, "MMMM d, yyyy")}</p>
+                </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <CalendarComponent
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => date && setSelectedDate(date)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          <motion.button 
+            onClick={goToNextDay}
+            whileTap={{ scale: 0.9 }} 
+            className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center"
+          >
             <ChevronRight className="w-5 h-5 text-muted-foreground" />
           </motion.button>
         </motion.div>
@@ -127,7 +237,7 @@ export default function Appointments() {
         >
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
-            placeholder="Search bookings..."
+            placeholder="Search by name, phone, or service..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-12 h-12 rounded-2xl bg-secondary border-0 text-base"
@@ -136,7 +246,7 @@ export default function Appointments() {
 
         {/* Tabs */}
         <motion.div
-          className="flex gap-2"
+          className="flex gap-2 overflow-x-auto"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -145,7 +255,7 @@ export default function Appointments() {
             <motion.button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-3 rounded-2xl font-semibold text-sm transition-colors ${
+              className={`flex-1 py-3 px-4 rounded-2xl font-semibold text-sm transition-colors whitespace-nowrap ${
                 activeTab === tab
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-muted-foreground"
@@ -160,31 +270,108 @@ export default function Appointments() {
         {/* Appointments List */}
         <motion.div 
           className="space-y-3"
-          variants={staggerContainer}
           initial="initial"
           animate="animate"
-          key={activeTab}
+          key={`${activeTab}-${format(selectedDate, "yyyy-MM-dd")}`}
         >
-          {filteredAppointments.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            </div>
+          ) : filteredAppointments.length === 0 ? (
             <motion.div 
               className="text-center py-12 text-muted-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <p className="text-lg font-medium">No bookings found</p>
-              <p className="text-sm">Try adjusting your search</p>
+              <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">No appointments found</p>
+              <p className="text-sm">
+                {activeTab === "All" 
+                  ? "No appointments for this date"
+                  : `No ${activeTab.toLowerCase()} appointments`}
+              </p>
             </motion.div>
           ) : (
-            filteredAppointments.map((appointment) => (
-              <AppointmentCard
+            filteredAppointments.map((appointment, index) => (
+              <motion.div
                 key={appointment.id}
-                clientName={appointment.clientName}
-                serviceName={appointment.serviceName}
-                time={appointment.time}
-                duration={appointment.duration}
-                status={appointment.status}
-                barberName={appointment.barberName}
-              />
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="mobile-card space-y-3"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <User className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{appointment.customer_name}</p>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Phone className="w-3 h-3" />
+                        {appointment.customer_phone}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-medium border capitalize",
+                    statusColors[appointment.status]
+                  )}>
+                    {appointment.status}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      {appointment.preferred_time}
+                    </div>
+                    {appointment.service && (
+                      <span className="text-foreground">{appointment.service.name}</span>
+                    )}
+                  </div>
+                  {appointment.service && (
+                    <span className="font-semibold text-primary">
+                      GH₵{appointment.service.price}
+                    </span>
+                  )}
+                </div>
+
+                {shops.length > 1 && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Store className="w-3 h-3" />
+                    {appointment.shop.name}
+                  </p>
+                )}
+
+                {appointment.barber && (
+                  <p className="text-xs text-muted-foreground">
+                    Preferred barber: {appointment.barber.name}
+                  </p>
+                )}
+
+                {appointment.notes && (
+                  <p className="text-sm text-muted-foreground italic">
+                    "{appointment.notes}"
+                  </p>
+                )}
+
+                {appointment.status === "pending" && (
+                  <div className="flex gap-2 pt-2 border-t border-border">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleCancelAppointment(appointment.id)}
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </motion.div>
             ))
           )}
         </motion.div>

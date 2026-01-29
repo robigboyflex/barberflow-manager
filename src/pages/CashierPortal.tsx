@@ -4,7 +4,8 @@ import {
   LogOut, 
   Clock, 
   DollarSign,
-  CreditCard
+  CreditCard,
+  CalendarDays
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
 import CloseShiftModal from "@/components/cashier/CloseShiftModal";
+import AppointmentsTab from "@/components/cashier/AppointmentsTab";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 
 interface ActivityItem {
@@ -48,6 +50,7 @@ export default function CashierPortal() {
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
+  const [activeView, setActiveView] = useState<"dashboard" | "appointments">("dashboard");
 
   useEffect(() => {
     if (!isAuthenticated || !staff) {
@@ -299,7 +302,46 @@ export default function CashierPortal() {
           </div>
         </header>
 
-        <div className="px-5 space-y-4">
+        {/* View Toggle */}
+        <div className="px-5 mb-4">
+          <div className="flex gap-2 bg-secondary/50 p-1 rounded-2xl">
+            <button
+              onClick={() => setActiveView("dashboard")}
+              className={`flex-1 py-3 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
+                activeView === "dashboard"
+                  ? "bg-card text-foreground shadow-md"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <DollarSign className="w-4 h-4" />
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveView("appointments")}
+              className={`flex-1 py-3 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
+                activeView === "appointments"
+                  ? "bg-card text-foreground shadow-md"
+                  : "text-muted-foreground"
+              }`}
+            >
+              <CalendarDays className="w-4 h-4" />
+              Appointments
+            </button>
+          </div>
+        </div>
+
+        {activeView === "appointments" ? (
+          <div className="px-5">
+            <AppointmentsTab
+              shopId={staff.shop_id}
+              cashierId={staff.id}
+              sessionToken={getSessionToken() || ''}
+              isClockedIn={isClockedIn}
+              onPaymentConfirmed={fetchData}
+            />
+          </div>
+        ) : (
+          <div className="px-5 space-y-4">
           {/* My Services Today Card */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -429,6 +471,7 @@ export default function CashierPortal() {
             </div>
           </motion.div>
         </div>
+        )}
 
         {/* Record Payment Modal */}
         <RecordPaymentModal
