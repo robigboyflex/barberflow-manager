@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          shop_id: string
+          staff_id: string | null
+          staff_name: string
+          staff_role: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          shop_id: string
+          staff_id?: string | null
+          staff_name: string
+          staff_role: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          shop_id?: string
+          staff_id?: string | null
+          staff_name?: string
+          staff_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -146,6 +197,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_locked: boolean
+          locked_at: string | null
+          locked_by: string | null
           net_profit: number
           shop_id: string
           summary_date: string
@@ -157,6 +211,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
           net_profit?: number
           shop_id: string
           summary_date: string
@@ -168,6 +225,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
           net_profit?: number
           shop_id?: string
           summary_date?: string
@@ -338,26 +398,38 @@ export type Database = {
         Row: {
           clock_in: string
           clock_out: string | null
+          closed_at: string | null
           created_at: string
           id: string
+          is_closed: boolean
           shop_id: string
           staff_id: string
+          total_revenue: number | null
+          total_transactions: number | null
         }
         Insert: {
           clock_in?: string
           clock_out?: string | null
+          closed_at?: string | null
           created_at?: string
           id?: string
+          is_closed?: boolean
           shop_id: string
           staff_id: string
+          total_revenue?: number | null
+          total_transactions?: number | null
         }
         Update: {
           clock_in?: string
           clock_out?: string | null
+          closed_at?: string | null
           created_at?: string
           id?: string
+          is_closed?: boolean
           shop_id?: string
           staff_id?: string
+          total_revenue?: number | null
+          total_transactions?: number | null
         }
         Relationships: [
           {
@@ -529,16 +601,22 @@ export type Database = {
       }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
       cleanup_old_pin_attempts: { Args: never; Returns: undefined }
-      confirm_cut:
-        | { Args: { p_cashier_id: string; p_cut_id: string }; Returns: boolean }
-        | {
-            Args: {
-              p_cashier_id: string
-              p_cut_id: string
-              p_session_token?: string
-            }
-            Returns: boolean
-          }
+      close_shift: {
+        Args: {
+          p_session_token: string
+          p_shift_id: string
+          p_staff_id: string
+        }
+        Returns: Json
+      }
+      confirm_cut: {
+        Args: {
+          p_cashier_id: string
+          p_cut_id: string
+          p_session_token?: string
+        }
+        Returns: boolean
+      }
       dispute_cut:
         | { Args: { p_cashier_id: string; p_cut_id: string }; Returns: boolean }
         | {
@@ -565,6 +643,21 @@ export type Database = {
           service_name: string
           service_price: number
           status: Database["public"]["Enums"]["cut_status"]
+        }[]
+      }
+      get_shop_activities: {
+        Args: { p_limit?: number; p_owner_id: string; p_shop_id?: string }
+        Returns: {
+          activity_type: string
+          created_at: string
+          description: string
+          id: string
+          metadata: Json
+          shop_id: string
+          shop_name: string
+          staff_id: string
+          staff_name: string
+          staff_role: string
         }[]
       }
       get_shop_barbers: {
@@ -626,28 +719,29 @@ export type Database = {
         }
         Returns: boolean
       }
-      log_cut:
-        | {
-            Args: {
-              p_barber_id: string
-              p_client_name?: string
-              p_price: number
-              p_service_id: string
-              p_shop_id: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_barber_id: string
-              p_client_name?: string
-              p_price: number
-              p_service_id: string
-              p_session_token?: string
-              p_shop_id: string
-            }
-            Returns: string
-          }
+      log_activity: {
+        Args: {
+          p_activity_type: string
+          p_description: string
+          p_metadata?: Json
+          p_shop_id: string
+          p_staff_id: string
+          p_staff_name: string
+          p_staff_role: string
+        }
+        Returns: string
+      }
+      log_cut: {
+        Args: {
+          p_barber_id: string
+          p_client_name?: string
+          p_price: number
+          p_service_id: string
+          p_session_token?: string
+          p_shop_id: string
+        }
+        Returns: string
+      }
       record_expense:
         | {
             Args: {

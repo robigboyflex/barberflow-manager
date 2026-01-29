@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
+import CloseShiftModal from "@/components/cashier/CloseShiftModal";
 import { getUserFriendlyError, logError } from "@/lib/errorHandler";
 
 interface ActivityItem {
@@ -36,6 +37,7 @@ export default function CashierPortal() {
   const { staff, logout, isAuthenticated, getSessionToken } = useStaffAuth();
   const [isClockedIn, setIsClockedIn] = useState(false);
   const [currentShiftId, setCurrentShiftId] = useState<string | null>(null);
+  const [currentShiftStart, setCurrentShiftStart] = useState<string | null>(null);
   const [summary, setSummary] = useState<DailySummary>({
     myServicesCount: 0,
     myEarnings: 0,
@@ -45,6 +47,7 @@ export default function CashierPortal() {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated || !staff) {
@@ -109,9 +112,11 @@ export default function CashierPortal() {
       if (activeShift && activeShift.length > 0) {
         setIsClockedIn(true);
         setCurrentShiftId(activeShift[0].shift_id);
+        setCurrentShiftStart(activeShift[0].clock_in);
       } else {
         setIsClockedIn(false);
         setCurrentShiftId(null);
+        setCurrentShiftStart(null);
       }
 
       // Fetch cashier's confirmed cuts using secure RPC
@@ -214,6 +219,7 @@ export default function CashierPortal() {
 
       setIsClockedIn(true);
       setCurrentShiftId(data);
+      setCurrentShiftStart(new Date().toISOString());
       toast.success("Clocked in successfully!");
       fetchData();
     } catch (error) {
@@ -222,33 +228,22 @@ export default function CashierPortal() {
     }
   };
 
-  const handleClockOut = async () => {
-    if (!staff || !currentShiftId) return;
-
-    const sessionToken = getSessionToken();
-    if (!sessionToken) {
-      toast.error("Session expired. Please log in again.");
-      navigate("/staff-login");
+  // Cashiers must close their shift when clocking out
+  const handleClockOut = () => {
+    if (!currentShiftId || !currentShiftStart) {
+      toast.error("No active shift found");
       return;
     }
+    // Open the close shift modal instead of directly clocking out
+    setShowCloseShiftModal(true);
+  };
 
-    try {
-      const { error } = await supabase.rpc('staff_clock_out', {
-        p_staff_id: staff.id,
-        p_shift_id: currentShiftId,
-        p_session_token: sessionToken
-      });
-
-      if (error) throw error;
-
-      setIsClockedIn(false);
-      setCurrentShiftId(null);
-      toast.success("Clocked out successfully!");
-      fetchData();
-    } catch (error) {
-      logError('CashierPortal.handleClockOut', error);
-      toast.error(getUserFriendlyError(error, 'clock out'));
-    }
+  const handleShiftClosed = (result: { dayCloded: boolean }) => {
+    setShowCloseShiftModal(false);
+    setIsClockedIn(false);
+    setCurrentShiftId(null);
+    setCurrentShiftStart(null);
+    fetchData();
   };
 
   const handleLogout = () => {
@@ -431,6 +426,19 @@ export default function CashierPortal() {
           cashierId={staff.id}
           onSuccess={fetchData}
         />
+
+        {/* Close Shift Modal */}
+        {currentShiftId && currentShiftStart && (
+          <CloseShiftModal
+            isOpen={showCloseShiftModal}
+            onClose={() => setShowCloseShiftModal(false)}
+            staffId={staff.id}
+            shiftId={currentShiftId}
+            shiftStartTime={currentShiftStart}
+            sessionToken={getSessionToken() || ''}
+            onSuccess={handleShiftClosed}
+          />
+        )}
       </div>
     </AnimatedPage>
   );
