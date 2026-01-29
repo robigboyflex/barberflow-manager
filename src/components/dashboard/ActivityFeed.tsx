@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 import { 
   Clock, 
   DollarSign, 
@@ -9,12 +10,20 @@ import {
   CheckCircle,
   Lock,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  CalendarIcon
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 
 interface Activity {
   id: string;
@@ -90,8 +99,9 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  const fetchActivities = async (showRefresh = false) => {
+  const fetchActivities = async (showRefresh = false, filterDate?: Date) => {
     if (showRefresh) setIsRefreshing(true);
     
     try {
@@ -102,7 +112,18 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
       });
 
       if (error) throw error;
-      setActivities(data || []);
+      
+      // Filter by date if selected
+      let filteredData = data || [];
+      if (filterDate) {
+        const filterDateStr = format(filterDate, 'yyyy-MM-dd');
+        filteredData = filteredData.filter((activity: Activity) => {
+          const activityDate = format(new Date(activity.created_at), 'yyyy-MM-dd');
+          return activityDate === filterDateStr;
+        });
+      }
+      
+      setActivities(filteredData);
     } catch (error) {
       console.error("Failed to fetch activities:", error);
     } finally {
@@ -112,7 +133,7 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
   };
 
   useEffect(() => {
-    fetchActivities();
+    fetchActivities(false, selectedDate);
 
     // Set up realtime subscription for new activities
     const channel = supabase
@@ -125,7 +146,7 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
           table: "activities",
         },
         () => {
-          fetchActivities();
+          fetchActivities(false, selectedDate);
         }
       )
       .subscribe();
@@ -133,7 +154,15 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [ownerId, shopId, limit]);
+  }, [ownerId, shopId, limit, selectedDate]);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+  };
+
+  const clearDateFilter = () => {
+    setSelectedDate(undefined);
+  };
 
   if (isLoading) {
     return (
@@ -149,15 +178,54 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg text-foreground">Live Activity</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => fetchActivities(true)}
-          disabled={isRefreshing}
-          className="h-8 w-8 p-0"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  "h-8 gap-1.5 text-xs",
+                  selectedDate && "bg-primary/10 text-primary"
+                )}
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+                {selectedDate ? format(selectedDate, "MMM d") : "Filter"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                disabled={(date) => date > new Date()}
+                initialFocus
+                className="pointer-events-auto"
+              />
+              {selectedDate && (
+                <div className="p-2 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearDateFilter}
+                    className="w-full text-xs"
+                  >
+                    Clear filter
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => fetchActivities(true, selectedDate)}
+            disabled={isRefreshing}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
       </div>
 
       {activities.length === 0 ? (
