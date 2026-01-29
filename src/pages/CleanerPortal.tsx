@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
-import { getUserFriendlyError, logError } from "@/lib/errorHandler";
+import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 
 interface Shift {
   shift_id: string;
@@ -76,6 +76,12 @@ export default function CleanerPortal() {
 
     } catch (error) {
       logError('CleanerPortal.fetchShiftData', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'load shift data'));
+        logout();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'load shift data'));
     } finally {
       setIsLoading(false);
@@ -106,6 +112,12 @@ export default function CleanerPortal() {
       fetchShiftData();
     } catch (error) {
       logError('CleanerPortal.handleClockIn', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'clock in'));
+        logout();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'clock in'));
     } finally {
       setIsClockingIn(false);
@@ -136,6 +148,12 @@ export default function CleanerPortal() {
       fetchShiftData();
     } catch (error) {
       logError('CleanerPortal.handleClockOut', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'clock out'));
+        logout();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'clock out'));
     } finally {
       setIsClockingOut(false);

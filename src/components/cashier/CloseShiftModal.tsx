@@ -4,8 +4,10 @@ import { X, CheckCircle, Clock, DollarSign, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { getUserFriendlyError, logError } from "@/lib/errorHandler";
+import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 import { formatCurrency } from "@/lib/currency";
+import { useNavigate } from "react-router-dom";
+import { useStaffAuth } from "@/contexts/StaffAuthContext";
 
 interface CloseShiftModalProps {
   isOpen: boolean;
@@ -26,6 +28,8 @@ export default function CloseShiftModal({
   sessionToken,
   onSuccess,
 }: CloseShiftModalProps) {
+  const navigate = useNavigate();
+  const { logout } = useStaffAuth();
   const [isClosing, setIsClosing] = useState(false);
   const [result, setResult] = useState<{
     transactions: number;
@@ -81,6 +85,13 @@ export default function CloseShiftModal({
 
     } catch (error) {
       logError('CloseShiftModal.handleCloseShift', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'close shift'));
+        logout();
+        onClose();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'close shift'));
     } finally {
       setIsClosing(false);

@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { getUserFriendlyError, logError } from "@/lib/errorHandler";
+import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 import { useStaffAuth } from "@/contexts/StaffAuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface Service {
   id: string;
@@ -37,7 +38,8 @@ export default function RecordPaymentModal({
   cashierId,
   onSuccess,
 }: RecordPaymentModalProps) {
-  const { getSessionToken } = useStaffAuth();
+  const navigate = useNavigate();
+  const { getSessionToken, logout } = useStaffAuth();
   const [customerName, setCustomerName] = useState("");
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
@@ -97,6 +99,13 @@ export default function RecordPaymentModal({
       }
     } catch (error) {
       logError('RecordPaymentModal.fetchData', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'load data'));
+        logout();
+        onClose();
+        navigate('/staff-login');
+        return;
+      }
     } finally {
       setIsLoading(false);
     }
@@ -155,6 +164,13 @@ export default function RecordPaymentModal({
       onClose();
     } catch (error) {
       logError('RecordPaymentModal.handleSubmit', error);
+      if (isSessionExpiredError(error)) {
+        toast.error(getUserFriendlyError(error, 'record payment'));
+        logout();
+        onClose();
+        navigate('/staff-login');
+        return;
+      }
       toast.error(getUserFriendlyError(error, 'record payment'));
     } finally {
       setIsSubmitting(false);

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface Staff {
@@ -31,6 +31,34 @@ export function StaffAuthProvider({ children }: { children: ReactNode }) {
     const saved = sessionStorage.getItem("staff_session");
     return saved ? JSON.parse(saved) : null;
   });
+
+  // If a staff session token becomes invalid (expired/revoked), auto-clear local state
+  // so the user is forced back to Staff Login instead of getting repeated RPC errors.
+  useEffect(() => {
+    let cancelled = false;
+
+    const validate = async () => {
+      if (!staff?.id || !staff?.sessionToken) return;
+
+      const { data, error } = await supabase.rpc('validate_staff_session', {
+        p_staff_id: staff.id,
+        p_session_token: staff.sessionToken,
+      });
+
+      if (cancelled) return;
+
+      if (error || data !== true) {
+        setStaff(null);
+        sessionStorage.removeItem("staff_session");
+      }
+    };
+
+    validate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [staff?.id, staff?.sessionToken]);
 
   const login = useCallback(async (shopId: string, pin: string): Promise<{ success: boolean; error?: string }> => {
     try {
