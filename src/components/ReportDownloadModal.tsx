@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Download, FileText, FileSpreadsheet, Calendar } from "lucide-react";
+import { format } from "date-fns";
+import { X, Download, FileText, FileSpreadsheet, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -10,9 +11,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 
 interface Shop {
   id: string;
@@ -26,8 +34,13 @@ interface ReportDownloadModalProps {
   userId: string;
 }
 
-type TimePeriod = "day" | "week" | "month" | "quarter" | "year";
+type TimePeriod = "day" | "week" | "month" | "quarter" | "year" | "custom";
 type FileFormat = "pdf" | "excel" | "csv";
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
+}
 
 export default function ReportDownloadModal({
   isOpen,
@@ -37,10 +50,11 @@ export default function ReportDownloadModal({
 }: ReportDownloadModalProps) {
   const [selectedShop, setSelectedShop] = useState<string>("all");
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("week");
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
   const [fileFormat, setFileFormat] = useState<FileFormat>("csv");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const getDateRange = (period: TimePeriod) => {
+  const getDateRangeForPeriod = (period: TimePeriod) => {
     const now = new Date();
     const start = new Date();
 
@@ -60,16 +74,30 @@ export default function ReportDownloadModal({
       case "year":
         start.setFullYear(now.getFullYear() - 1);
         break;
+      case "custom":
+        if (dateRange.from && dateRange.to) {
+          const customStart = new Date(dateRange.from);
+          customStart.setHours(0, 0, 0, 0);
+          const customEnd = new Date(dateRange.to);
+          customEnd.setHours(23, 59, 59, 999);
+          return { start: customStart, end: customEnd };
+        }
+        return { start, end: now };
     }
 
     return { start, end: now };
   };
 
   const generateReport = async () => {
+    if (timePeriod === "custom" && (!dateRange.from || !dateRange.to)) {
+      toast.error("Please select both start and end dates");
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
-      const { start, end } = getDateRange(timePeriod);
+      const { start, end } = getDateRangeForPeriod(timePeriod);
       const shopIds = selectedShop === "all" ? shops.map((s) => s.id) : [selectedShop];
 
       if (shopIds.length === 0) {
@@ -383,13 +411,14 @@ export default function ReportDownloadModal({
 
             <div className="space-y-2">
               <Label>Time Period</Label>
-              <div className="grid grid-cols-5 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   { value: "day", label: "Day" },
                   { value: "week", label: "Week" },
                   { value: "month", label: "Month" },
                   { value: "quarter", label: "Quarter" },
                   { value: "year", label: "Year" },
+                  { value: "custom", label: "Custom" },
                 ].map((option) => (
                   <motion.button
                     key={option.value}
@@ -406,6 +435,67 @@ export default function ReportDownloadModal({
                 ))}
               </div>
             </div>
+
+            {/* Custom Date Range Picker */}
+            {timePeriod === "custom" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-2"
+              >
+                <Label>Select Date Range</Label>
+                <div className="flex gap-3">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "flex-1 h-12 rounded-xl justify-start text-left font-normal",
+                          !dateRange.from && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange.from ? format(dateRange.from, "MMM d, yyyy") : "Start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateRange.from}
+                        onSelect={(date) => setDateRange((prev) => ({ ...prev, from: date }))}
+                        disabled={(date) => date > new Date() || (dateRange.to ? date > dateRange.to : false)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "flex-1 h-12 rounded-xl justify-start text-left font-normal",
+                          !dateRange.to && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange.to ? format(dateRange.to, "MMM d, yyyy") : "End date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateRange.to}
+                        onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
+                        disabled={(date) => date > new Date() || (dateRange.from ? date < dateRange.from : false)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </motion.div>
+            )}
 
             <div className="space-y-2">
               <Label>File Format</Label>
