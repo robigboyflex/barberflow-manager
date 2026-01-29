@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import iconicBarberLogo from "@/assets/iconic-barber-logo.jpg";
+import barbershopBackground from "@/assets/barbershop-background.jpg";
 
 const features = [
   "Manage multiple shop locations",
@@ -13,13 +14,23 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12 safe-area-top safe-area-bottom">
+    <div 
+      className="min-h-screen flex flex-col items-center justify-center px-6 py-12 safe-area-top safe-area-bottom relative"
+      style={{
+        backgroundImage: `url(${barbershopBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Dark overlay for better text readability */}
+      <div className="absolute inset-0 bg-background/85" />
       {/* App Icon */}
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", duration: 0.6 }}
-        className="w-32 h-32 rounded-full overflow-hidden shadow-xl shadow-primary/30 mb-8"
+        className="relative z-10 w-32 h-32 rounded-full overflow-hidden shadow-xl shadow-primary/30 mb-8"
       >
         <img src={iconicBarberLogo} alt="Iconic Barber Logo" className="w-full h-full object-cover" />
       </motion.div>
@@ -29,7 +40,7 @@ export default function Welcome() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="text-4xl md:text-5xl font-display tracking-wide text-foreground mb-2"
+        className="relative z-10 text-4xl md:text-5xl font-display tracking-wide text-foreground mb-2"
       >
         Iconic Barber
       </motion.h1>
@@ -38,7 +49,7 @@ export default function Welcome() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="text-muted-foreground text-lg mb-10"
+        className="relative z-10 text-muted-foreground text-lg mb-10"
       >
         Multi-shop management made simple
       </motion.p>
@@ -48,7 +59,7 @@ export default function Welcome() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="space-y-4 w-full max-w-sm mb-12"
+        className="relative z-10 space-y-4 w-full max-w-sm mb-12"
       >
         {features.map((feature, index) => (
           <motion.li
@@ -69,7 +80,7 @@ export default function Welcome() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.9 }}
-        className="w-full max-w-sm space-y-4"
+        className="relative z-10 w-full max-w-sm space-y-4"
       >
         <motion.button
           whileTap={{ scale: 0.97 }}
