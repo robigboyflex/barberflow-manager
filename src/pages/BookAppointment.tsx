@@ -133,7 +133,7 @@ export default function BookAppointment() {
           customer_name: customerName.trim(),
           customer_phone: customerPhone.trim(),
           service_id: selectedService,
-          preferred_barber_id: selectedBarber || null,
+          preferred_barber_id: selectedBarber === "no_preference" ? null : selectedBarber || null,
           preferred_date: format(selectedDate, "yyyy-MM-dd"),
           preferred_time: selectedTime,
           notes: notes.trim() || null,
@@ -269,7 +269,7 @@ export default function BookAppointment() {
                   <SelectValue placeholder="No preference" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No preference</SelectItem>
+                  <SelectItem value="no_preference">No preference</SelectItem>
                   {barbers.map((barber) => (
                     <SelectItem key={barber.id} value={barber.id}>
                       {barber.name}

@@ -1,12 +1,12 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { LayoutDashboard, BarChart3, Users, Scissors } from "lucide-react";
+import { LayoutDashboard, BarChart3, CalendarDays, Scissors } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Home" },
   { path: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
-  { path: "/dashboard/clients", icon: Users, label: "Clients" },
+  { path: "/dashboard/appointments", icon: CalendarDays, label: "Bookings" },
   { path: "/dashboard/services", icon: Scissors, label: "Services" },
 ];
 
