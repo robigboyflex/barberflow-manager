@@ -21,13 +21,15 @@ import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { StaffAuthProvider } from "./contexts/StaffAuthContext";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <StaffAuthProvider>
+      <AuthProvider>
+        <StaffAuthProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -51,7 +53,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </StaffAuthProvider>
+        </StaffAuthProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
