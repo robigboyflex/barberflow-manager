@@ -89,17 +89,20 @@ export default function OwnerAnalytics() {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchShops();
-  }, [user]);
+    if (user?.id) {
+      fetchShops();
+    }
+  }, [user?.id]);
 
   useEffect(() => {
+    if (!user?.id) return;
     if (shops.length > 0 || selectedShop === "all") {
       // Only fetch if not custom, or if custom has valid date range
       if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
         fetchAnalytics();
       }
     }
-  }, [selectedShop, timePeriod, shops, dateRange]);
+  }, [selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to, user?.id]);
 
   const fetchShops = async () => {
     if (!user) return;

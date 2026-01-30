@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,12 +10,22 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/");
+    // Only redirect once and only when fully loaded with no user
+    if (!loading && !user && !hasRedirected.current) {
+      hasRedirected.current = true;
+      navigate("/", { replace: true });
     }
   }, [user, loading, navigate]);
+
+  // Reset redirect flag when user logs in
+  useEffect(() => {
+    if (user) {
+      hasRedirected.current = false;
+    }
+  }, [user]);
 
   if (loading) {
     return (
