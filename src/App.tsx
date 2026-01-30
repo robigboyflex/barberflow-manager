@@ -15,6 +15,7 @@ import CleanerPortal from "./pages/CleanerPortal";
 import Appointments from "./pages/Appointments";
 import Clients from "./pages/Clients";
 import Services from "./pages/Services";
+import ShopSettings from "./pages/ShopSettings";
 import BookAppointment from "./pages/BookAppointment";
 import NotFound from "./pages/NotFound";
 import Layout from "./components/Layout";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
               <Route path="shop/:shopId" element={<ShopDetail />} />
+              <Route path="shop/:shopId/settings" element={<ShopSettings />} />
               <Route path="analytics" element={<OwnerAnalytics />} />
               <Route path="appointments" element={<Appointments />} />
               <Route path="clients" element={<Clients />} />
