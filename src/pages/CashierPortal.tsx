@@ -51,6 +51,7 @@ export default function CashierPortal() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [activeView, setActiveView] = useState<"dashboard" | "appointments">("dashboard");
+  const [pendingAppointmentsCount, setPendingAppointmentsCount] = useState(0);
 
   useEffect(() => {
     if (!isAuthenticated || !staff) {
@@ -63,9 +64,10 @@ export default function CashierPortal() {
       return;
     }
     fetchData();
+    fetchPendingAppointmentsCount();
 
-    // Set up realtime subscription
-    const channel = supabase
+    // Set up realtime subscription for cuts
+    const cutsChannel = supabase
       .channel("cashier-realtime")
       .on(
         "postgres_changes",
@@ -81,10 +83,51 @@ export default function CashierPortal() {
       )
       .subscribe();
 
+    // Set up realtime subscription for appointments
+    const appointmentsChannel = supabase
+      .channel("cashier-appointments-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `shop_id=eq.${staff.shop_id}`,
+        },
+        () => {
+          fetchPendingAppointmentsCount();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(cutsChannel);
+      supabase.removeChannel(appointmentsChannel);
     };
   }, [isAuthenticated, staff]);
+
+  const fetchPendingAppointmentsCount = async () => {
+    if (!staff) return;
+    
+    const sessionToken = getSessionToken();
+    if (!sessionToken) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase.rpc('get_shop_appointments', {
+        p_staff_id: staff.id,
+        p_session_token: sessionToken,
+        p_date: today
+      });
+
+      if (error) throw error;
+      
+      const pendingCount = data?.filter((apt: any) => apt.status === 'pending').length || 0;
+      setPendingAppointmentsCount(pendingCount);
+    } catch (error) {
+      logError('CashierPortal.fetchPendingAppointmentsCount', error);
+    }
+  };
 
   const fetchData = async () => {
     if (!staff) return;
@@ -318,7 +361,7 @@ export default function CashierPortal() {
             </button>
             <button
               onClick={() => setActiveView("appointments")}
-              className={`flex-1 py-3 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
+              className={`flex-1 py-3 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 relative ${
                 activeView === "appointments"
                   ? "bg-card text-foreground shadow-md"
                   : "text-muted-foreground"
@@ -326,6 +369,11 @@ export default function CashierPortal() {
             >
               <CalendarDays className="w-4 h-4" />
               Appointments
+              {pendingAppointmentsCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
+                  {pendingAppointmentsCount > 99 ? "99+" : pendingAppointmentsCount}
+                </span>
+              )}
             </button>
           </div>
         </div>
