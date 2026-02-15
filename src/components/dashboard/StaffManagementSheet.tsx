@@ -112,7 +112,7 @@ export default function StaffManagementSheet({
   };
 
   const formatSalary = (staff: StaffMember): string => {
-    if (!staff.salary_amount && staff.salary_amount !== 0) return "Not set";
+    if (!staff.salary_amount) return "Not set";
     const type = staff.salary_type || "fixed";
     if (type === "percentage") return `${staff.salary_amount}%`;
     if (type === "per_cut") return `${formatCurrency(staff.salary_amount)}/cut`;
