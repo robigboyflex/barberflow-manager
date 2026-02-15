@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Store, MapPin, Users, ChevronRight, Plus, Power, Trash2 } from "lucide-react";
+import { Store, MapPin, Users, ChevronRight, Plus, UserCheck, UserX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Sheet,
@@ -120,6 +120,29 @@ export default function ShopsManagementSheet({
                       </span>
                       <span className="text-xs text-muted-foreground">today</span>
                     </div>
+                  </div>
+
+                  {/* Cashier Status */}
+                  <div className={`flex items-center gap-2 mt-2 px-2 py-1.5 rounded-lg ${
+                    shop.cashierOnDuty 
+                      ? "bg-success/10" 
+                      : "bg-destructive/10"
+                  }`}>
+                    {shop.cashierOnDuty ? (
+                      <>
+                        <UserCheck className="w-3.5 h-3.5 text-success" />
+                        <span className="text-xs font-medium text-success">
+                          {shop.cashierOnDuty} on duty
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <UserX className="w-3.5 h-3.5 text-destructive" />
+                        <span className="text-xs font-medium text-destructive">
+                          No cashier on duty
+                        </span>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               ))
