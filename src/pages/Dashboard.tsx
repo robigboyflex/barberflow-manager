@@ -161,6 +161,7 @@ export default function Dashboard() {
                     staffCount={shop.staffCount}
                     todayRevenue={shop.todayRevenue}
                     isLive={shop.is_active}
+                    cashierOnDuty={shop.cashierOnDuty}
                     onClick={() => handleShopClick(shop.id)}
                   />
                 </motion.div>

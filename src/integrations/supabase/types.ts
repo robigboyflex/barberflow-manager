@@ -574,6 +574,8 @@ export type Database = {
           pin: string
           pin_hash: string | null
           role: Database["public"]["Enums"]["staff_role"]
+          salary_amount: number | null
+          salary_type: string | null
           shop_id: string
           updated_at: string
         }
@@ -586,6 +588,8 @@ export type Database = {
           pin: string
           pin_hash?: string | null
           role: Database["public"]["Enums"]["staff_role"]
+          salary_amount?: number | null
+          salary_type?: string | null
           shop_id: string
           updated_at?: string
         }
@@ -598,6 +602,8 @@ export type Database = {
           pin?: string
           pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
+          salary_amount?: number | null
+          salary_type?: string | null
           shop_id?: string
           updated_at?: string
         }

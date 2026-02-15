@@ -26,6 +26,7 @@ export interface Staff {
 export interface ShopWithStats extends Shop {
   staffCount: number;
   todayRevenue: number;
+  cashierOnDuty: string | null; // name of active cashier, or null if none
 }
 
 export function useShops() {
@@ -36,7 +37,7 @@ export function useShops() {
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
+    const cutsChannel = supabase
       .channel('cuts-realtime')
       .on(
         'postgres_changes',
@@ -46,14 +47,29 @@ export function useShops() {
           table: 'cuts',
         },
         () => {
-          // Invalidate shops query to refetch with updated revenue
+          queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
+        }
+      )
+      .subscribe();
+
+    const shiftsChannel = supabase
+      .channel('shifts-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shifts',
+        },
+        () => {
           queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(cutsChannel);
+      supabase.removeChannel(shiftsChannel);
     };
   }, [user, queryClient]);
 
@@ -72,11 +88,11 @@ export function useShops() {
       if (shopsError) throw shopsError;
       if (!shops || shops.length === 0) return [];
 
-      // Fetch staff counts for each shop
+      // Fetch staff counts and cashier names for each shop
       const shopIds = shops.map(s => s.id);
       const { data: staffData, error: staffError } = await supabase
         .from("staff")
-        .select("shop_id")
+        .select("shop_id, name, role")
         .in("shop_id", shopIds)
         .eq("is_active", true);
 
@@ -99,6 +115,36 @@ export function useShops() {
 
       if (cutsError) throw cutsError;
 
+      // Fetch active shifts (open, not closed) to determine cashier on duty
+      const { data: activeShifts, error: shiftsError } = await supabase
+        .from("shifts")
+        .select("shop_id, staff_id")
+        .in("shop_id", shopIds)
+        .eq("is_closed", false)
+        .is("clock_out", null);
+
+      if (shiftsError) throw shiftsError;
+
+      // Map active shift staff_ids to cashier names
+      const cashierMap: Record<string, string> = {};
+      if (activeShifts && activeShifts.length > 0) {
+        const activeStaffIds = activeShifts.map(s => s.staff_id);
+        // Find which of these are cashiers
+        const cashierStaff = staffData?.filter(
+          s => s.role === "cashier" && activeStaffIds.includes(s.shop_id ? "" : "")
+        );
+        // Build a staff_id -> name lookup from staffData by fetching the actual staff
+        const { data: shiftStaffData } = await supabase
+          .from("staff")
+          .select("id, name, role, shop_id")
+          .in("id", activeStaffIds)
+          .eq("role", "cashier");
+
+        shiftStaffData?.forEach(s => {
+          cashierMap[s.shop_id] = s.name;
+        });
+      }
+
       // Count staff per shop
       const staffCountMap: Record<string, number> = {};
       staffData?.forEach(s => {
@@ -116,6 +162,7 @@ export function useShops() {
         ...shop,
         staffCount: staffCountMap[shop.id] || 0,
         todayRevenue: revenueMap[shop.id] || 0,
+        cashierOnDuty: cashierMap[shop.id] || null,
       }));
     },
     enabled: !!user,

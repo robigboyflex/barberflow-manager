@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, User, Phone, Lock, Trash2, AlertTriangle } from "lucide-react";
+import { X, User, Phone, Lock, Trash2, AlertTriangle, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { CURRENCY_SYMBOL } from "@/lib/currency";
 
 interface StaffMember {
   id: string;
@@ -30,6 +32,8 @@ interface StaffMember {
   role: "barber" | "cashier" | "cleaner";
   phone: string | null;
   is_active: boolean;
+  salary_type?: string | null;
+  salary_amount?: number | null;
 }
 
 interface EditStaffModalProps {
@@ -51,6 +55,8 @@ export default function EditStaffModal({
   const [role, setRole] = useState<"barber" | "cashier" | "cleaner">("barber");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
+  const [salaryType, setSalaryType] = useState<"fixed" | "percentage" | "per_cut">("fixed");
+  const [salaryAmount, setSalaryAmount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -60,6 +66,8 @@ export default function EditStaffModal({
       setRole(staff.role);
       setPhone(staff.phone || "");
       setPin("");
+      setSalaryType((staff.salary_type as "fixed" | "percentage" | "per_cut") || "fixed");
+      setSalaryAmount(staff.salary_amount?.toString() || "");
     }
   }, [staff]);
 
@@ -80,6 +88,14 @@ export default function EditStaffModal({
       toast.error("PIN must contain only numbers");
       return false;
     }
+    if (salaryAmount && isNaN(Number(salaryAmount))) {
+      toast.error("Salary amount must be a number");
+      return false;
+    }
+    if (salaryType === "percentage" && Number(salaryAmount) > 100) {
+      toast.error("Percentage cannot exceed 100%");
+      return false;
+    }
     return true;
   };
 
@@ -89,10 +105,12 @@ export default function EditStaffModal({
     setIsLoading(true);
 
     try {
-      const updateData: Record<string, string | null> = {
+      const updateData: Record<string, string | number | null> = {
         name: name.trim(),
         role,
         phone: phone.trim() || null,
+        salary_type: role === "cashier" ? "fixed" : salaryType,
+        salary_amount: salaryAmount ? Number(salaryAmount) : 0,
       };
 
       if (pin) {
@@ -147,8 +165,25 @@ export default function EditStaffModal({
     setRole("barber");
     setPhone("");
     setPin("");
+    setSalaryType("fixed");
+    setSalaryAmount("");
     onClose();
   };
+
+  // Force cashiers to fixed salary
+  const effectiveSalaryType = role === "cashier" ? "fixed" : salaryType;
+
+  const salaryPlaceholder = effectiveSalaryType === "percentage" 
+    ? "e.g. 30" 
+    : effectiveSalaryType === "per_cut" 
+      ? "e.g. 15" 
+      : "e.g. 1500";
+
+  const salaryLabel = effectiveSalaryType === "percentage"
+    ? "Percentage (%)"
+    : effectiveSalaryType === "per_cut"
+      ? `Amount per Cut (${CURRENCY_SYMBOL})`
+      : `Monthly Salary (${CURRENCY_SYMBOL})`;
 
   if (!staff) return null;
 
@@ -157,7 +192,6 @@ export default function EditStaffModal({
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -166,13 +200,12 @@ export default function EditStaffModal({
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
             />
 
-            {/* Modal */}
             <motion.div
               initial={{ opacity: 0, y: 100, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 100, scale: 0.95 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-x-4 bottom-4 top-auto bg-card rounded-3xl z-50 flex flex-col overflow-hidden border border-border shadow-2xl max-h-[80vh]"
+              className="fixed inset-x-4 bottom-4 top-auto bg-card rounded-3xl z-50 flex flex-col overflow-hidden border border-border shadow-2xl max-h-[85vh]"
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-border">
@@ -251,6 +284,73 @@ export default function EditStaffModal({
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">4-6 digits</p>
+                </div>
+
+                {/* Salary Configuration */}
+                <div className="space-y-3 p-4 rounded-xl bg-secondary/50 border border-border/50">
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="w-4 h-4 text-primary" />
+                    <Label className="text-sm font-semibold">Compensation</Label>
+                  </div>
+
+                  {/* Barbers get salary type options */}
+                  {role === "barber" && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Salary Type</Label>
+                      <RadioGroup
+                        value={salaryType}
+                        onValueChange={(v) => setSalaryType(v as "fixed" | "percentage" | "per_cut")}
+                        className="grid grid-cols-3 gap-2"
+                      >
+                        <label className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          salaryType === "fixed" ? "border-primary bg-primary/5" : "border-border"
+                        }`}>
+                          <RadioGroupItem value="fixed" />
+                          <span className="text-xs font-medium">Fixed</span>
+                        </label>
+                        <label className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          salaryType === "percentage" ? "border-primary bg-primary/5" : "border-border"
+                        }`}>
+                          <RadioGroupItem value="percentage" />
+                          <span className="text-xs font-medium">% Based</span>
+                        </label>
+                        <label className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          salaryType === "per_cut" ? "border-primary bg-primary/5" : "border-border"
+                        }`}>
+                          <RadioGroupItem value="per_cut" />
+                          <span className="text-xs font-medium">Per Cut</span>
+                        </label>
+                      </RadioGroup>
+                    </div>
+                  )}
+
+                  {role === "cashier" && (
+                    <p className="text-xs text-muted-foreground">
+                      Cashiers receive a fixed monthly salary
+                    </p>
+                  )}
+
+                  {role === "cleaner" && (
+                    <p className="text-xs text-muted-foreground">
+                      Cleaners receive a fixed monthly salary
+                    </p>
+                  )}
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">{salaryLabel}</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="number"
+                        placeholder={salaryPlaceholder}
+                        value={salaryAmount}
+                        onChange={(e) => setSalaryAmount(e.target.value)}
+                        className="h-12 rounded-xl pl-10"
+                        min="0"
+                        step={effectiveSalaryType === "percentage" ? "1" : "0.01"}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Delete Button */}

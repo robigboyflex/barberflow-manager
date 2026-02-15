@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Store, Users, MapPin, DollarSign, TrendingUp, ChevronRight, Plus, Activity } from "lucide-react";
+import { Store, Users, MapPin, DollarSign, TrendingUp, ChevronRight, Plus, Activity, UserCheck, UserX } from "lucide-react";
 import { formatCurrency } from "@/lib/currency";
 
 interface ShopCardProps {
@@ -8,6 +8,7 @@ interface ShopCardProps {
   staffCount: number;
   todayRevenue: number;
   isLive?: boolean;
+  cashierOnDuty?: string | null;
   onClick?: () => void;
 }
 
@@ -17,6 +18,7 @@ export default function ShopCard({
   staffCount, 
   todayRevenue, 
   isLive = true,
+  cashierOnDuty,
   onClick 
 }: ShopCardProps) {
   return (
@@ -39,6 +41,29 @@ export default function ShopCard({
           </div>
         </div>
         <ChevronRight className="w-5 h-5 text-muted-foreground" />
+      </div>
+
+      {/* Cashier Status */}
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-xl mb-3 ${
+        cashierOnDuty 
+          ? "bg-success/10 border border-success/20" 
+          : "bg-destructive/10 border border-destructive/20"
+      }`}>
+        {cashierOnDuty ? (
+          <>
+            <UserCheck className="w-4 h-4 text-success" />
+            <span className="text-xs font-medium text-success">
+              Cashier Active — {cashierOnDuty}
+            </span>
+          </>
+        ) : (
+          <>
+            <UserX className="w-4 h-4 text-destructive" />
+            <span className="text-xs font-medium text-destructive">
+              No Cashier on Duty
+            </span>
+          </>
+        )}
       </div>
 
       {/* Divider */}
