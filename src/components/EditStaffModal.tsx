@@ -58,6 +58,7 @@ export default function EditStaffModal({
   const [pin, setPin] = useState("");
   const [salaryType, setSalaryType] = useState<"fixed" | "percentage" | "per_cut">("fixed");
   const [salaryAmount, setSalaryAmount] = useState("");
+  const [salaryPayDay, setSalaryPayDay] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
