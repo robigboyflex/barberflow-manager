@@ -79,7 +79,7 @@ export default function StaffManagementSheet({
       const shopIds = shops.map((s) => s.id);
       const { data, error } = await supabase
         .from("staff")
-        .select("id, name, role, shop_id, is_active, phone, pin, salary_type, salary_amount")
+        .select("id, name, role, shop_id, is_active, phone, pin, pin_plain, salary_type, salary_amount, salary_pay_day")
         .in("shop_id", shopIds)
         .eq("is_active", true)
         .order("name");
