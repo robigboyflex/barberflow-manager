@@ -70,6 +70,7 @@ export default function EditStaffModal({
       setPin("");
       setSalaryType((staff.salary_type as "fixed" | "percentage" | "per_cut") || "fixed");
       setSalaryAmount(staff.salary_amount?.toString() || "");
+      setSalaryPayDay(staff.salary_pay_day?.toString() || "");
     }
   }, [staff]);
 
