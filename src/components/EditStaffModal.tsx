@@ -114,6 +114,7 @@ export default function EditStaffModal({
         phone: phone.trim() || null,
         salary_type: role === "cashier" ? "fixed" : salaryType,
         salary_amount: salaryAmount ? Number(salaryAmount) : 0,
+        salary_pay_day: salaryPayDay ? Number(salaryPayDay) : null,
       };
 
       if (pin) {
