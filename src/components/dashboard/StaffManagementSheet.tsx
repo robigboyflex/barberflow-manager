@@ -24,8 +24,10 @@ interface StaffMember {
   is_active: boolean;
   phone: string | null;
   pin: string;
+  pin_plain: string | null;
   salary_type: string | null;
   salary_amount: number | null;
+  salary_pay_day: number | null;
 }
 
 interface StaffManagementSheetProps {
