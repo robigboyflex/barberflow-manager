@@ -171,6 +171,7 @@ export default function EditStaffModal({
     setPin("");
     setSalaryType("fixed");
     setSalaryAmount("");
+    setSalaryPayDay("");
     onClose();
   };
 
