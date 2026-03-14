@@ -2,6 +2,7 @@ import { LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import LiveClock from "@/components/LiveClock";
 
 export default function Header() {
   const navigate = useNavigate();
