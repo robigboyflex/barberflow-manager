@@ -575,6 +575,45 @@ export default function CashierPortal() {
             onSuccess={handleShiftClosed}
           />
         )}
+
+        {/* Auto Clock-Out Prompt */}
+        {showAutoClockOutPrompt && isClockedIn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-card rounded-2xl p-6 max-w-sm w-full border border-border shadow-2xl text-center space-y-4"
+            >
+              <Clock className="w-12 h-12 text-warning mx-auto" />
+              <h3 className="font-display text-xl text-foreground">It's past 2:00 AM</h3>
+              <p className="text-sm text-muted-foreground">
+                Would you like to clock out? You will be automatically clocked out in 30 seconds.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAutoClockOutPrompt(false)}
+                  className="h-12 rounded-xl"
+                >
+                  Stay Clocked In
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowAutoClockOutPrompt(false);
+                    handleClockOut();
+                  }}
+                  className="h-12 rounded-xl bg-warning text-warning-foreground hover:bg-warning/90"
+                >
+                  Clock Out
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </div>
     </AnimatedPage>
   );
