@@ -578,6 +578,48 @@ function AddStaffInlineModal({
               className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
             />
           </div>
+
+          {role === "barber" && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Salary Type</label>
+              <select
+                value={salaryType}
+                onChange={(e) => setSalaryType(e.target.value as "fixed" | "percentage" | "per_cut")}
+                className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+              >
+                <option value="fixed">Fixed Monthly</option>
+                <option value="percentage">% per Cut</option>
+                <option value="per_cut">Per Cut</option>
+              </select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              {salaryType === "percentage" && role === "barber" ? "Percentage (%)" : "Salary Amount (GH₵)"}
+            </label>
+            <input
+              type="number"
+              value={salaryAmount}
+              onChange={(e) => setSalaryAmount(e.target.value)}
+              placeholder={salaryType === "percentage" ? "e.g. 30" : "e.g. 1500"}
+              min="0"
+              className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Salary Pay Day (1-31)</label>
+            <input
+              type="number"
+              value={salaryPayDay}
+              onChange={(e) => setSalaryPayDay(e.target.value)}
+              placeholder="e.g. 25"
+              min="1"
+              max="31"
+              className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+            />
+          </div>
         </div>
 
         <div className="p-4 border-t border-border">
