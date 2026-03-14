@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Store, ChevronRight, Scissors, CreditCard, Sparkles, DollarSign, Pencil } from "lucide-react";
+import { Users, Store, ChevronRight, Scissors, CreditCard, Sparkles, DollarSign, Pencil, Key } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Sheet,
