@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Store, Users, TrendingUp } from "lucide-react";
+import { Store, Users, TrendingUp, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AnimatedPage from "@/components/AnimatedPage";
 import ShopCard, { AddShopButton } from "@/components/ShopCard";
@@ -8,9 +8,11 @@ import AddShopModal from "@/components/AddShopModal";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import ShopsManagementSheet from "@/components/dashboard/ShopsManagementSheet";
 import StaffManagementSheet from "@/components/dashboard/StaffManagementSheet";
+import SalaryAlertsCard from "@/components/dashboard/SalaryAlertsCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useShops } from "@/hooks/useShops";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
 
 export default function Dashboard() {
