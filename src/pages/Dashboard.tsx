@@ -123,6 +123,11 @@ export default function Dashboard() {
           </motion.div>
         </motion.div>
 
+        {/* Salary Alerts */}
+        {user && (
+          <SalaryAlertsCard ownerId={user.id} />
+        )}
+
         {/* Your Shops Section */}
         <div className="space-y-4">
           <motion.div 
@@ -134,7 +139,18 @@ export default function Dashboard() {
             <h2 className="font-display text-xl tracking-wide text-foreground">
               Your Shops
             </h2>
-            <AddShopButton onClick={handleAddShop} />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full gap-1.5 text-success"
+                onClick={handleStaffStatClick}
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Employee
+              </Button>
+              <AddShopButton onClick={handleAddShop} />
+            </div>
           </motion.div>
 
           <motion.div 
