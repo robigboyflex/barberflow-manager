@@ -452,6 +452,9 @@ function AddStaffInlineModal({
   const [role, setRole] = useState<"barber" | "cashier" | "cleaner">("barber");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
+  const [salaryAmount, setSalaryAmount] = useState("");
+  const [salaryPayDay, setSalaryPayDay] = useState("");
+  const [salaryType, setSalaryType] = useState<"fixed" | "percentage" | "per_cut">("fixed");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -467,16 +470,28 @@ function AddStaffInlineModal({
       toast.error("PIN must contain only numbers");
       return;
     }
+    if (!salaryAmount || isNaN(Number(salaryAmount)) || Number(salaryAmount) < 0) {
+      toast.error("Please enter a valid salary amount");
+      return;
+    }
+    if (!salaryPayDay || isNaN(Number(salaryPayDay)) || Number(salaryPayDay) < 1 || Number(salaryPayDay) > 31) {
+      toast.error("Salary pay day must be between 1 and 31");
+      return;
+    }
 
     setIsLoading(true);
 
     try {
+      const effectiveSalaryType = role === "cashier" || role === "cleaner" ? "fixed" : salaryType;
       const { error } = await supabase.from("staff").insert({
         shop_id: shopId,
         name: name.trim(),
         role,
         phone: phone.trim() || null,
         pin,
+        salary_type: effectiveSalaryType,
+        salary_amount: Number(salaryAmount),
+        salary_pay_day: Number(salaryPayDay),
       });
 
       if (error) throw error;
@@ -560,6 +575,48 @@ function AddStaffInlineModal({
               onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="••••••"
               maxLength={6}
+              className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+            />
+          </div>
+
+          {role === "barber" && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Salary Type</label>
+              <select
+                value={salaryType}
+                onChange={(e) => setSalaryType(e.target.value as "fixed" | "percentage" | "per_cut")}
+                className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+              >
+                <option value="fixed">Fixed Monthly</option>
+                <option value="percentage">% per Cut</option>
+                <option value="per_cut">Per Cut</option>
+              </select>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              {salaryType === "percentage" && role === "barber" ? "Percentage (%)" : "Salary Amount (GH₵)"}
+            </label>
+            <input
+              type="number"
+              value={salaryAmount}
+              onChange={(e) => setSalaryAmount(e.target.value)}
+              placeholder={salaryType === "percentage" ? "e.g. 30" : "e.g. 1500"}
+              min="0"
+              className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Salary Pay Day (1-31)</label>
+            <input
+              type="number"
+              value={salaryPayDay}
+              onChange={(e) => setSalaryPayDay(e.target.value)}
+              placeholder="e.g. 25"
+              min="1"
+              max="31"
               className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
             />
           </div>

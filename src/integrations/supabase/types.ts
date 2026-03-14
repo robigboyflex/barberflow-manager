@@ -439,6 +439,57 @@ export type Database = {
         }
         Relationships: []
       }
+      salary_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_date: string
+          period_end: string | null
+          period_start: string | null
+          shop_id: string
+          staff_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          period_end?: string | null
+          period_start?: string | null
+          shop_id: string
+          staff_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          period_end?: string | null
+          period_start?: string | null
+          shop_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           created_at: string
@@ -573,8 +624,10 @@ export type Database = {
           phone: string | null
           pin: string
           pin_hash: string | null
+          pin_plain: string | null
           role: Database["public"]["Enums"]["staff_role"]
           salary_amount: number | null
+          salary_pay_day: number | null
           salary_type: string | null
           shop_id: string
           updated_at: string
@@ -587,8 +640,10 @@ export type Database = {
           phone?: string | null
           pin: string
           pin_hash?: string | null
+          pin_plain?: string | null
           role: Database["public"]["Enums"]["staff_role"]
           salary_amount?: number | null
+          salary_pay_day?: number | null
           salary_type?: string | null
           shop_id: string
           updated_at?: string
@@ -601,8 +656,10 @@ export type Database = {
           phone?: string | null
           pin?: string
           pin_hash?: string | null
+          pin_plain?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           salary_amount?: number | null
+          salary_pay_day?: number | null
           salary_type?: string | null
           shop_id?: string
           updated_at?: string

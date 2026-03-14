@@ -2,6 +2,7 @@ import { LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import LiveClock from "@/components/LiveClock";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function Header() {
           <h1 className="font-display text-3xl tracking-wide text-foreground">
             {firstName}
           </h1>
+          <LiveClock className="mt-1" />
         </div>
         <motion.button
           onClick={handleSignOut}

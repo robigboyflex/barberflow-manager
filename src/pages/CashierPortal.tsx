@@ -16,6 +16,7 @@ import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
 import CloseShiftModal from "@/components/cashier/CloseShiftModal";
 import AppointmentsTab from "@/components/cashier/AppointmentsTab";
+import LiveClock from "@/components/LiveClock";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 
 interface ActivityItem {
@@ -52,6 +53,37 @@ export default function CashierPortal() {
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [activeView, setActiveView] = useState<"dashboard" | "appointments">("dashboard");
   const [pendingAppointmentsCount, setPendingAppointmentsCount] = useState(0);
+  const [showAutoClockOutPrompt, setShowAutoClockOutPrompt] = useState(false);
+
+  // 2AM auto clock-out check
+  useEffect(() => {
+    if (!isClockedIn) return;
+
+    const checkAutoClockOut = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour >= 2 && hour < 5) {
+        setShowAutoClockOutPrompt(true);
+      }
+    };
+
+    checkAutoClockOut();
+    const interval = setInterval(checkAutoClockOut, 60000); // check every minute
+    return () => clearInterval(interval);
+  }, [isClockedIn]);
+
+  // Auto clock-out after 30s of no response
+  useEffect(() => {
+    if (!showAutoClockOutPrompt || !isClockedIn) return;
+
+    const timeout = setTimeout(() => {
+      handleClockOut();
+      setShowAutoClockOutPrompt(false);
+      toast.info("You have been automatically clocked out (past 2:00 AM)");
+    }, 30000);
+
+    return () => clearTimeout(timeout);
+  }, [showAutoClockOutPrompt, isClockedIn]);
 
   useEffect(() => {
     if (!isAuthenticated || !staff) {
@@ -334,6 +366,7 @@ export default function CashierPortal() {
                 <CreditCard className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Cashier</span>
               </div>
+              <LiveClock className="mt-1" />
             </div>
             <motion.button
               onClick={handleLogout}
@@ -541,6 +574,45 @@ export default function CashierPortal() {
             sessionToken={getSessionToken() || ''}
             onSuccess={handleShiftClosed}
           />
+        )}
+
+        {/* Auto Clock-Out Prompt */}
+        {showAutoClockOutPrompt && isClockedIn && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-card rounded-2xl p-6 max-w-sm w-full border border-border shadow-2xl text-center space-y-4"
+            >
+              <Clock className="w-12 h-12 text-warning mx-auto" />
+              <h3 className="font-display text-xl text-foreground">It's past 2:00 AM</h3>
+              <p className="text-sm text-muted-foreground">
+                Would you like to clock out? You will be automatically clocked out in 30 seconds.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAutoClockOutPrompt(false)}
+                  className="h-12 rounded-xl"
+                >
+                  Stay Clocked In
+                </Button>
+                <Button
+                  onClick={() => {
+                    setShowAutoClockOutPrompt(false);
+                    handleClockOut();
+                  }}
+                  className="h-12 rounded-xl bg-warning text-warning-foreground hover:bg-warning/90"
+                >
+                  Clock Out
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </div>
     </AnimatedPage>

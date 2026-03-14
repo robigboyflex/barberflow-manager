@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Store, Users, TrendingUp } from "lucide-react";
+import { Store, Users, TrendingUp, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AnimatedPage from "@/components/AnimatedPage";
 import ShopCard, { AddShopButton } from "@/components/ShopCard";
@@ -8,9 +8,11 @@ import AddShopModal from "@/components/AddShopModal";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import ShopsManagementSheet from "@/components/dashboard/ShopsManagementSheet";
 import StaffManagementSheet from "@/components/dashboard/StaffManagementSheet";
+import SalaryAlertsCard from "@/components/dashboard/SalaryAlertsCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useShops } from "@/hooks/useShops";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/currency";
 
 export default function Dashboard() {
@@ -121,6 +123,11 @@ export default function Dashboard() {
           </motion.div>
         </motion.div>
 
+        {/* Salary Alerts */}
+        {user && (
+          <SalaryAlertsCard ownerId={user.id} />
+        )}
+
         {/* Your Shops Section */}
         <div className="space-y-4">
           <motion.div 
@@ -132,7 +139,18 @@ export default function Dashboard() {
             <h2 className="font-display text-xl tracking-wide text-foreground">
               Your Shops
             </h2>
-            <AddShopButton onClick={handleAddShop} />
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full gap-1.5 text-success"
+                onClick={handleStaffStatClick}
+              >
+                <UserPlus className="w-4 h-4" />
+                Add Employee
+              </Button>
+              <AddShopButton onClick={handleAddShop} />
+            </div>
           </motion.div>
 
           <motion.div 

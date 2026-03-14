@@ -34,6 +34,7 @@ interface StaffMember {
   is_active: boolean;
   salary_type?: string | null;
   salary_amount?: number | null;
+  salary_pay_day?: number | null;
 }
 
 interface EditStaffModalProps {
@@ -57,6 +58,7 @@ export default function EditStaffModal({
   const [pin, setPin] = useState("");
   const [salaryType, setSalaryType] = useState<"fixed" | "percentage" | "per_cut">("fixed");
   const [salaryAmount, setSalaryAmount] = useState("");
+  const [salaryPayDay, setSalaryPayDay] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -68,6 +70,7 @@ export default function EditStaffModal({
       setPin("");
       setSalaryType((staff.salary_type as "fixed" | "percentage" | "per_cut") || "fixed");
       setSalaryAmount(staff.salary_amount?.toString() || "");
+      setSalaryPayDay(staff.salary_pay_day?.toString() || "");
     }
   }, [staff]);
 
@@ -111,6 +114,7 @@ export default function EditStaffModal({
         phone: phone.trim() || null,
         salary_type: role === "cashier" ? "fixed" : salaryType,
         salary_amount: salaryAmount ? Number(salaryAmount) : 0,
+        salary_pay_day: salaryPayDay ? Number(salaryPayDay) : null,
       };
 
       if (pin) {
@@ -167,6 +171,7 @@ export default function EditStaffModal({
     setPin("");
     setSalaryType("fixed");
     setSalaryAmount("");
+    setSalaryPayDay("");
     onClose();
   };
 
@@ -349,8 +354,23 @@ export default function EditStaffModal({
                         min="0"
                         step={effectiveSalaryType === "percentage" ? "1" : "0.01"}
                       />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Salary Pay Day (1-31)</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        placeholder="e.g. 25"
+                        value={salaryPayDay}
+                        onChange={(e) => setSalaryPayDay(e.target.value)}
+                        className="h-12 rounded-xl"
+                        min="1"
+                        max="31"
+                      />
                     </div>
                   </div>
+                </div>
                 </div>
 
                 {/* Delete Button */}
