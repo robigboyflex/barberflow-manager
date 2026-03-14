@@ -26,6 +26,7 @@ export default function Header() {
           <h1 className="font-display text-3xl tracking-wide text-foreground">
             {firstName}
           </h1>
+          <LiveClock className="mt-1" />
         </div>
         <motion.button
           onClick={handleSignOut}

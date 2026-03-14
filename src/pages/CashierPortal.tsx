@@ -335,6 +335,7 @@ export default function CashierPortal() {
                 <CreditCard className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Cashier</span>
               </div>
+              <LiveClock className="mt-1" />
             </div>
             <motion.button
               onClick={handleLogout}
