@@ -354,8 +354,23 @@ export default function EditStaffModal({
                         min="0"
                         step={effectiveSalaryType === "percentage" ? "1" : "0.01"}
                       />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Salary Pay Day (1-31)</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        placeholder="e.g. 25"
+                        value={salaryPayDay}
+                        onChange={(e) => setSalaryPayDay(e.target.value)}
+                        className="h-12 rounded-xl"
+                        min="1"
+                        max="31"
+                      />
                     </div>
                   </div>
+                </div>
                 </div>
 
                 {/* Delete Button */}
