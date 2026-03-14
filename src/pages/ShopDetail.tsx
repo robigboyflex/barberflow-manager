@@ -452,6 +452,9 @@ function AddStaffInlineModal({
   const [role, setRole] = useState<"barber" | "cashier" | "cleaner">("barber");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
+  const [salaryAmount, setSalaryAmount] = useState("");
+  const [salaryPayDay, setSalaryPayDay] = useState("");
+  const [salaryType, setSalaryType] = useState<"fixed" | "percentage" | "per_cut">("fixed");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -467,16 +470,28 @@ function AddStaffInlineModal({
       toast.error("PIN must contain only numbers");
       return;
     }
+    if (!salaryAmount || isNaN(Number(salaryAmount)) || Number(salaryAmount) < 0) {
+      toast.error("Please enter a valid salary amount");
+      return;
+    }
+    if (!salaryPayDay || isNaN(Number(salaryPayDay)) || Number(salaryPayDay) < 1 || Number(salaryPayDay) > 31) {
+      toast.error("Salary pay day must be between 1 and 31");
+      return;
+    }
 
     setIsLoading(true);
 
     try {
+      const effectiveSalaryType = role === "cashier" || role === "cleaner" ? "fixed" : salaryType;
       const { error } = await supabase.from("staff").insert({
         shop_id: shopId,
         name: name.trim(),
         role,
         phone: phone.trim() || null,
         pin,
+        salary_type: effectiveSalaryType,
+        salary_amount: Number(salaryAmount),
+        salary_pay_day: Number(salaryPayDay),
       });
 
       if (error) throw error;
