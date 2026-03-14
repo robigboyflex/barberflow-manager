@@ -53,6 +53,37 @@ export default function CashierPortal() {
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [activeView, setActiveView] = useState<"dashboard" | "appointments">("dashboard");
   const [pendingAppointmentsCount, setPendingAppointmentsCount] = useState(0);
+  const [showAutoClockOutPrompt, setShowAutoClockOutPrompt] = useState(false);
+
+  // 2AM auto clock-out check
+  useEffect(() => {
+    if (!isClockedIn) return;
+
+    const checkAutoClockOut = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      if (hour >= 2 && hour < 5) {
+        setShowAutoClockOutPrompt(true);
+      }
+    };
+
+    checkAutoClockOut();
+    const interval = setInterval(checkAutoClockOut, 60000); // check every minute
+    return () => clearInterval(interval);
+  }, [isClockedIn]);
+
+  // Auto clock-out after 30s of no response
+  useEffect(() => {
+    if (!showAutoClockOutPrompt || !isClockedIn) return;
+
+    const timeout = setTimeout(() => {
+      handleClockOut();
+      setShowAutoClockOutPrompt(false);
+      toast.info("You have been automatically clocked out (past 2:00 AM)");
+    }, 30000);
+
+    return () => clearTimeout(timeout);
+  }, [showAutoClockOutPrompt, isClockedIn]);
 
   useEffect(() => {
     if (!isAuthenticated || !staff) {
