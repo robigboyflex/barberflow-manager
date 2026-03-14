@@ -195,9 +195,19 @@ export default function StaffManagementSheet({
                             >
                               <div className="flex items-center gap-2">
                                 <Icon className={`w-4 h-4 ${colorClass}`} />
-                                <span className="text-sm text-foreground">
-                                  {staff.name}
-                                </span>
+                                <div>
+                                  <span className="text-sm text-foreground">
+                                    {staff.name}
+                                  </span>
+                                  {staff.pin_plain && (
+                                    <div className="flex items-center gap-1">
+                                      <Key className="w-2.5 h-2.5 text-muted-foreground" />
+                                      <span className="text-[10px] text-muted-foreground font-mono">
+                                        PIN: {staff.pin_plain}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-[10px] gap-1">
