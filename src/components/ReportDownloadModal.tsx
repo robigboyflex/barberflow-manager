@@ -264,82 +264,159 @@ export default function ReportDownloadModal({
     end: Date
   ) => {
     const periodLabel = `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
+
+    // Calculate barber breakdown for the report
+    const barberMap = new Map<string, { name: string; cuts: number; revenue: number }>();
+    cuts.forEach(cut => {
+      if (cut.status !== "confirmed") return;
+      const barber = cut.staff as any;
+      const name = barber?.name || "Unknown";
+      const existing = barberMap.get(name);
+      if (existing) {
+        existing.cuts++;
+        existing.revenue += Number(cut.price);
+      } else {
+        barberMap.set(name, { name, cuts: 1, revenue: Number(cut.price) });
+      }
+    });
+    const barberBreakdown = Array.from(barberMap.values()).sort((a, b) => b.cuts - a.cuts);
     
-    // Generate HTML for PDF
     const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <title>BarberFlow Report</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
-    h1 { color: #d4a048; border-bottom: 2px solid #d4a048; padding-bottom: 10px; }
-    h2 { color: #333; margin-top: 30px; }
-    .summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 20px 0; }
-    .summary-item { background: #f5f5f5; padding: 15px; border-radius: 8px; }
-    .summary-item label { font-size: 12px; color: #666; }
-    .summary-item value { font-size: 24px; font-weight: bold; color: #333; display: block; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background: #f5f5f5; font-weight: bold; }
-    .profit { color: ${netProfit >= 0 ? '#22c55e' : '#ef4444'}; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f8f9fa; color: #1a1a2e; }
+    .header { background: linear-gradient(135deg, #d4a048, #c4922a); color: #fff; padding: 40px; }
+    .header h1 { font-size: 28px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
+    .header p { opacity: 0.85; font-size: 14px; }
+    .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: -30px 20px 30px; position: relative; z-index: 1; }
+    .summary-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
+    .summary-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
+    .summary-card .value { font-size: 22px; font-weight: 800; }
+    .summary-card .value.revenue { color: #22c55e; }
+    .summary-card .value.expense { color: #ef4444; }
+    .summary-card .value.profit { color: ${netProfit >= 0 ? '#22c55e' : '#ef4444'}; }
+    .summary-card .value.cuts { color: #d4a048; }
+    .section { background: #fff; border-radius: 12px; margin: 20px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .section h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .section h2::before { content: ''; width: 4px; height: 20px; background: #d4a048; border-radius: 2px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
+    tr:last-child td { border-bottom: none; }
+    .total-row { background: #fef9ee; font-weight: 700; }
+    .total-row td { border-top: 2px solid #d4a048; color: #1a1a2e; }
+    .barber-rank { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .rank-1 { background: linear-gradient(135deg, #fbbf24, #d97706); color: #fff; }
+    .rank-2 { background: linear-gradient(135deg, #d1d5db, #9ca3af); color: #fff; }
+    .rank-3 { background: linear-gradient(135deg, #f97316, #c2410c); color: #fff; }
+    .rank-other { background: #f3f4f6; color: #6b7280; }
+    .footer { text-align: center; padding: 20px; font-size: 11px; color: #999; }
+    @media print { body { background: #fff; } .section { box-shadow: none; border: 1px solid #eee; } .summary-grid { margin-top: -20px; } .summary-card { box-shadow: none; border: 1px solid #eee; } }
   </style>
 </head>
 <body>
-  <h1>BarberFlow Revenue Report</h1>
-  <p>Period: ${periodLabel}</p>
-  
-  <div class="summary">
-    <div class="summary-item">
-      <label>Total Revenue</label>
-      <value>${formatCurrency(totalRevenue)}</value>
-    </div>
-    <div class="summary-item">
-      <label>Total Expenses</label>
-      <value>${formatCurrency(totalExpenses)}</value>
-    </div>
-    <div class="summary-item">
-      <label>Net Profit</label>
-      <value class="profit">${formatCurrency(netProfit)}</value>
-    </div>
-    <div class="summary-item">
-      <label>Total Cuts</label>
-      <value>${totalCuts}</value>
+  <div class="header">
+    <div class="container">
+      <h1>📊 BarberFlow Report</h1>
+      <p>Period: ${periodLabel}</p>
     </div>
   </div>
-  
-  <h2>Cuts Detail</h2>
-  <table>
-    <tr><th>Date</th><th>Shop</th><th>Barber</th><th>Service</th><th>Amount</th><th>Status</th></tr>
-    ${cuts.map((cut) => {
-      const shop = cut.shops as any;
-      const barber = cut.staff as any;
-      const service = cut.services as any;
-      return `<tr>
-        <td>${new Date(cut.created_at).toLocaleString()}</td>
-        <td>${shop?.name || "N/A"}</td>
-        <td>${barber?.name || "N/A"}</td>
-        <td>${service?.name || "N/A"}</td>
-        <td>${formatCurrency(Number(cut.price))}</td>
-        <td>${cut.status}</td>
-      </tr>`;
-    }).join('')}
-  </table>
-  
-  <h2>Expenses Detail</h2>
-  <table>
-    <tr><th>Date</th><th>Shop</th><th>Category</th><th>Description</th><th>Amount</th></tr>
-    ${expenses.map((expense) => {
-      const shop = expense.shops as any;
-      return `<tr>
-        <td>${expense.expense_date}</td>
-        <td>${shop?.name || "N/A"}</td>
-        <td>${expense.category}</td>
-        <td>${expense.description}</td>
-        <td>${formatCurrency(Number(expense.amount))}</td>
-      </tr>`;
-    }).join('')}
-  </table>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="label">Total Revenue</div>
+      <div class="value revenue">${formatCurrency(totalRevenue)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Expenses</div>
+      <div class="value expense">${formatCurrency(totalExpenses)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Net Profit</div>
+      <div class="value profit">${formatCurrency(netProfit)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Cuts</div>
+      <div class="value cuts">${totalCuts}</div>
+    </div>
+  </div>
+
+  ${barberBreakdown.length > 0 ? `
+  <div class="section">
+    <h2>Barber Performance</h2>
+    <table>
+      <tr><th>Rank</th><th>Barber</th><th>Cuts</th><th>Revenue</th></tr>
+      ${barberBreakdown.map((b, i) => `
+        <tr>
+          <td><span class="barber-rank ${i < 3 ? `rank-${i + 1}` : 'rank-other'}">${i + 1}</span></td>
+          <td>${b.name}</td>
+          <td>${b.cuts}</td>
+          <td>${formatCurrency(b.revenue)}</td>
+        </tr>
+      `).join('')}
+      <tr class="total-row">
+        <td colspan="2"><strong>Total</strong></td>
+        <td><strong>${barberBreakdown.reduce((s, b) => s + b.cuts, 0)}</strong></td>
+        <td><strong>${formatCurrency(barberBreakdown.reduce((s, b) => s + b.revenue, 0))}</strong></td>
+      </tr>
+    </table>
+  </div>
+  ` : ''}
+
+  <div class="section">
+    <h2>Cuts Detail</h2>
+    <table>
+      <tr><th>Date</th><th>Shop</th><th>Barber</th><th>Service</th><th>Amount</th><th>Status</th></tr>
+      ${cuts.map((cut) => {
+        const shop = cut.shops as any;
+        const barber = cut.staff as any;
+        const service = cut.services as any;
+        return `<tr>
+          <td>${new Date(cut.created_at).toLocaleString()}</td>
+          <td>${shop?.name || "N/A"}</td>
+          <td>${barber?.name || "N/A"}</td>
+          <td>${service?.name || "N/A"}</td>
+          <td>${formatCurrency(Number(cut.price))}</td>
+          <td>${cut.status}</td>
+        </tr>`;
+      }).join('')}
+      <tr class="total-row">
+        <td colspan="4"><strong>Total (${totalCuts} confirmed cuts)</strong></td>
+        <td><strong>${formatCurrency(totalRevenue)}</strong></td>
+        <td></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Expenses Detail</h2>
+    <table>
+      <tr><th>Date</th><th>Shop</th><th>Category</th><th>Description</th><th>Amount</th></tr>
+      ${expenses.map((expense) => {
+        const shop = expense.shops as any;
+        return `<tr>
+          <td>${expense.expense_date}</td>
+          <td>${shop?.name || "N/A"}</td>
+          <td>${expense.category}</td>
+          <td>${expense.description}</td>
+          <td>${formatCurrency(Number(expense.amount))}</td>
+        </tr>`;
+      }).join('')}
+      <tr class="total-row">
+        <td colspan="4"><strong>Total Expenses</strong></td>
+        <td><strong>${formatCurrency(totalExpenses)}</strong></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    Generated by BarberFlow • ${new Date().toLocaleString()}
+  </div>
 </body>
 </html>`;
 

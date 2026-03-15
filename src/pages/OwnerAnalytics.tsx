@@ -472,11 +472,40 @@ export default function OwnerAnalytics() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
+          className="space-y-3"
         >
-          <h2 className="font-display text-lg mb-3">Barber Leaderboard</h2>
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-primary" />
+            <h2 className="font-display text-xl tracking-wide">Barber Leaderboard</h2>
+          </div>
+
+          {/* Totals summary bar */}
+          {!isLoading && barberStats.length > 0 && (
+            <div className="rounded-2xl bg-gradient-to-r from-primary/10 via-card to-success/10 border border-border p-4 flex items-center justify-around">
+              <div className="text-center">
+                <p className="text-2xl font-display text-foreground">
+                  {barberStats.reduce((s, b) => s + b.cutsCount, 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Cuts</p>
+              </div>
+              <div className="w-px h-8 bg-border" />
+              <div className="text-center">
+                <p className="text-2xl font-display text-primary">
+                  {formatCurrency(barberStats.reduce((s, b) => s + b.revenue, 0))}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Revenue</p>
+              </div>
+              <div className="w-px h-8 bg-border" />
+              <div className="text-center">
+                <p className="text-2xl font-display text-foreground">{barberStats.length}</p>
+                <p className="text-xs text-muted-foreground">Barbers</p>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-16 rounded-xl" />
+              <Skeleton className="h-20 rounded-2xl" />
               <Skeleton className="h-16 rounded-xl" />
             </div>
           ) : barberStats.length === 0 ? (
@@ -486,34 +515,75 @@ export default function OwnerAnalytics() {
             </div>
           ) : (
             <div className="space-y-2">
-              {barberStats.map((barber, index) => (
-                <motion.div
-                  key={barber.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="mobile-card flex items-center gap-3"
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg ${
-                      index === 0
-                        ? "bg-primary text-primary-foreground"
-                        : index === 1
-                        ? "bg-secondary text-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {index + 1}
+              {/* Top barber highlight */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-card to-card border border-primary/30 p-4"
+              >
+                <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full -translate-y-6 translate-x-6" />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
+                    <Award className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-foreground">{barber.name}</p>
-                    <p className="text-sm text-muted-foreground">{barber.cutsCount} cuts</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-display text-lg text-foreground">{barberStats[0].name}</p>
+                      <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full font-semibold">#1</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{barberStats[0].cutsCount} cuts</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-display text-xl text-primary">{formatCurrency(barber.revenue)}</p>
-                  </div>
-                </motion.div>
-              ))}
+                  <p className="font-display text-2xl text-primary">{formatCurrency(barberStats[0].revenue)}</p>
+                </div>
+                <div className="mt-3 h-1.5 bg-muted rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 0.8 }}
+                    className="h-full bg-gradient-to-r from-primary to-warning rounded-full"
+                  />
+                </div>
+              </motion.div>
+
+              {/* Rest */}
+              {barberStats.slice(1).map((barber, index) => {
+                const rank = index + 2;
+                const progress = (barber.cutsCount / (barberStats[0]?.cutsCount || 1)) * 100;
+                return (
+                  <motion.div
+                    key={barber.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="mobile-card flex items-center gap-3 py-3"
+                  >
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-display text-sm ${
+                      rank === 2 ? "bg-gradient-to-br from-gray-300 to-gray-400 text-primary-foreground shadow-md"
+                        : rank === 3 ? "bg-gradient-to-br from-orange-400 to-orange-600 text-primary-foreground shadow-md"
+                        : "bg-muted text-muted-foreground"
+                    }`}>
+                      {rank}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="font-medium text-foreground text-sm truncate">{barber.name}</p>
+                        <div className="flex items-center gap-2 ml-2 shrink-0">
+                          <span className="text-xs text-muted-foreground">{barber.cutsCount} cuts</span>
+                          <span className="font-display text-sm text-primary">{formatCurrency(barber.revenue)}</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progress}%` }}
+                          transition={{ duration: 0.6, delay: 0.1 + index * 0.05 }}
+                          className="h-full rounded-full bg-muted-foreground/30"
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
         </motion.div>
