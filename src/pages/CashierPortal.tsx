@@ -5,7 +5,8 @@ import {
   Clock, 
   DollarSign,
   CreditCard,
-  CalendarDays
+  TrendingDown,
+  Scissors
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { useStaffAuth } from "@/contexts/StaffAuthContext";
 import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
 import CloseShiftModal from "@/components/cashier/CloseShiftModal";
-import AppointmentsTab from "@/components/cashier/AppointmentsTab";
+import AddExpenseModal from "@/components/cashier/AddExpenseModal";
 import LiveClock from "@/components/LiveClock";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 
@@ -33,6 +34,13 @@ interface DailySummary {
   myEarnings: number;
   shopServicesCount: number;
   shopRevenue: number;
+  shopExpenses: number;
+}
+
+interface BarberCutCount {
+  id: string;
+  name: string;
+  cutCount: number;
 }
 
 export default function CashierPortal() {
@@ -46,19 +54,19 @@ export default function CashierPortal() {
     myEarnings: 0,
     shopServicesCount: 0,
     shopRevenue: 0,
+    shopExpenses: 0,
   });
+  const [barberCuts, setBarberCuts] = useState<BarberCutCount[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
-  const [activeView, setActiveView] = useState<"dashboard" | "appointments">("dashboard");
-  const [pendingAppointmentsCount, setPendingAppointmentsCount] = useState(0);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showAutoClockOutPrompt, setShowAutoClockOutPrompt] = useState(false);
 
   // 2AM auto clock-out check
   useEffect(() => {
     if (!isClockedIn) return;
-
     const checkAutoClockOut = () => {
       const now = new Date();
       const hour = now.getHours();
@@ -66,22 +74,19 @@ export default function CashierPortal() {
         setShowAutoClockOutPrompt(true);
       }
     };
-
     checkAutoClockOut();
-    const interval = setInterval(checkAutoClockOut, 60000); // check every minute
+    const interval = setInterval(checkAutoClockOut, 60000);
     return () => clearInterval(interval);
   }, [isClockedIn]);
 
   // Auto clock-out after 30s of no response
   useEffect(() => {
     if (!showAutoClockOutPrompt || !isClockedIn) return;
-
     const timeout = setTimeout(() => {
       handleClockOut();
       setShowAutoClockOutPrompt(false);
       toast.info("You have been automatically clocked out (past 2:00 AM)");
     }, 30000);
-
     return () => clearTimeout(timeout);
   }, [showAutoClockOutPrompt, isClockedIn]);
 
@@ -96,74 +101,25 @@ export default function CashierPortal() {
       return;
     }
     fetchData();
-    fetchPendingAppointmentsCount();
 
-    // Set up realtime subscription for cuts
     const cutsChannel = supabase
       .channel("cashier-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cuts",
-          filter: `shop_id=eq.${staff.shop_id}`,
-        },
-        () => {
-          fetchData();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "cuts", filter: `shop_id=eq.${staff.shop_id}` }, () => fetchData())
       .subscribe();
 
-    // Set up realtime subscription for appointments
-    const appointmentsChannel = supabase
-      .channel("cashier-appointments-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "appointments",
-          filter: `shop_id=eq.${staff.shop_id}`,
-        },
-        () => {
-          fetchPendingAppointmentsCount();
-        }
-      )
+    const expensesChannel = supabase
+      .channel("cashier-expenses-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `shop_id=eq.${staff.shop_id}` }, () => fetchData())
       .subscribe();
 
     return () => {
       supabase.removeChannel(cutsChannel);
-      supabase.removeChannel(appointmentsChannel);
+      supabase.removeChannel(expensesChannel);
     };
   }, [isAuthenticated, staff]);
 
-  const fetchPendingAppointmentsCount = async () => {
-    if (!staff) return;
-    
-    const sessionToken = getSessionToken();
-    if (!sessionToken) return;
-
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase.rpc('get_shop_appointments', {
-        p_staff_id: staff.id,
-        p_session_token: sessionToken,
-        p_date: today
-      });
-
-      if (error) throw error;
-      
-      const pendingCount = data?.filter((apt: any) => apt.status === 'pending').length || 0;
-      setPendingAppointmentsCount(pendingCount);
-    } catch (error) {
-      logError('CashierPortal.fetchPendingAppointmentsCount', error);
-    }
-  };
-
   const fetchData = async () => {
     if (!staff) return;
-    
     const sessionToken = getSessionToken();
     if (!sessionToken) {
       toast.error("Session expired. Please log in again.");
@@ -177,15 +133,12 @@ export default function CashierPortal() {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // Check for active shift using secure RPC
+      // Check for active shift
       const { data: activeShift, error: shiftError } = await supabase.rpc('get_staff_active_shift', {
         p_staff_id: staff.id,
         p_session_token: sessionToken
       });
-
-      if (shiftError) {
-        logError('CashierPortal.getActiveShift', shiftError);
-      }
+      if (shiftError) logError('CashierPortal.getActiveShift', shiftError);
 
       if (activeShift && activeShift.length > 0) {
         setIsClockedIn(true);
@@ -197,77 +150,101 @@ export default function CashierPortal() {
         setCurrentShiftStart(null);
       }
 
-      // Fetch cashier's confirmed cuts using secure RPC
-      if (sessionToken) {
-        const { data: allShopCuts, error: cutsError } = await supabase.rpc('get_shop_cuts_for_cashier', {
-          p_cashier_id: staff.id,
-          p_session_token: sessionToken,
-          p_start_date: today.toISOString(),
-          p_end_date: tomorrow.toISOString()
+      // Fetch all shop cuts for today
+      const { data: allShopCuts, error: cutsError } = await supabase.rpc('get_shop_cuts_for_cashier', {
+        p_cashier_id: staff.id,
+        p_session_token: sessionToken,
+        p_start_date: today.toISOString(),
+        p_end_date: tomorrow.toISOString()
+      });
+      if (cutsError) throw cutsError;
+
+      const confirmedCuts = allShopCuts?.filter((c: any) => c.status === 'confirmed') || [];
+      const myServicesCount = confirmedCuts.length;
+      const myEarnings = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
+      const shopServicesCount = confirmedCuts.length;
+      const shopRevenue = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
+
+      // Fetch today's expenses
+      const { data: expensesData } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('shop_id', staff.shop_id)
+        .gte('expense_date', today.toISOString().split('T')[0])
+        .lte('expense_date', today.toISOString().split('T')[0]);
+
+      const shopExpenses = expensesData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+
+      setSummary({ myServicesCount, myEarnings, shopServicesCount, shopRevenue, shopExpenses });
+
+      // Build barber cut counts
+      const barberMap = new Map<string, { name: string; count: number }>();
+      // Also fetch barbers list to show barbers with 0 cuts
+      const { data: barbersData } = await supabase.rpc('get_shop_barbers', {
+        p_shop_id: staff.shop_id,
+        p_staff_id: staff.id,
+        p_session_token: sessionToken
+      });
+
+      barbersData?.forEach((b: any) => {
+        barberMap.set(b.id, { name: b.name, count: 0 });
+      });
+
+      confirmedCuts.forEach((cut: any) => {
+        const existing = barberMap.get(cut.barber_id);
+        if (existing) {
+          existing.count += 1;
+        } else {
+          barberMap.set(cut.barber_id, { name: cut.barber_name, count: 1 });
+        }
+      });
+
+      setBarberCuts(
+        Array.from(barberMap.entries()).map(([id, data]) => ({
+          id,
+          name: data.name,
+          cutCount: data.count,
+        }))
+      );
+
+      // Build recent activity
+      const activities: ActivityItem[] = [];
+      confirmedCuts.forEach((cut: any) => {
+        const clientPart = cut.client_name ? ` for ${cut.client_name}` : "";
+        activities.push({
+          id: cut.id,
+          type: "payment",
+          description: `${cut.service_name}${clientPart} - GH₵${Number(cut.price).toFixed(0)} (${cut.payment_method || "cash"})`,
+          timestamp: cut.created_at,
+          amount: Number(cut.price),
+          paymentMethod: cut.payment_method || "cash",
         });
+      });
 
-        if (cutsError) throw cutsError;
+      const { data: todayShifts } = await supabase.rpc('get_staff_today_shifts', {
+        p_staff_id: staff.id,
+        p_session_token: sessionToken
+      });
 
-        // Filter my confirmed cuts
-        const myCuts = allShopCuts?.filter((c: any) => c.status === 'confirmed') || [];
-        const myServicesCount = myCuts.length;
-        const myEarnings = myCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
-
-        // Shop totals
-        const confirmedCuts = allShopCuts?.filter((c: any) => c.status === 'confirmed') || [];
-        const shopServicesCount = confirmedCuts.length;
-        const shopRevenue = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
-
-        setSummary({
-          myServicesCount,
-          myEarnings,
-          shopServicesCount,
-          shopRevenue,
+      todayShifts?.forEach((shift: { shift_id: string; clock_in: string; clock_out: string | null }) => {
+        activities.push({
+          id: `${shift.shift_id}-in`,
+          type: "clock_in",
+          description: `${staff.name} clocked in`,
+          timestamp: shift.clock_in,
         });
-
-        // Build recent activity
-        const activities: ActivityItem[] = [];
-
-        // Add payment activities
-        myCuts.forEach((cut: any) => {
-          const clientPart = cut.client_name ? ` for ${cut.client_name}` : "";
+        if (shift.clock_out) {
           activities.push({
-            id: cut.id,
-            type: "payment",
-            description: `${cut.service_name}${clientPart} - GH₵${Number(cut.price).toFixed(0)} (${cut.payment_method || "cash"})`,
-            timestamp: cut.created_at,
-            amount: Number(cut.price),
-            paymentMethod: cut.payment_method || "cash",
+            id: `${shift.shift_id}-out`,
+            type: "clock_out",
+            description: `${staff.name} clocked out`,
+            timestamp: shift.clock_out,
           });
-        });
+        }
+      });
 
-        // Add shift activities using secure RPC
-        const { data: todayShifts } = await supabase.rpc('get_staff_today_shifts', {
-          p_staff_id: staff.id,
-          p_session_token: sessionToken
-        });
-
-        todayShifts?.forEach((shift: { shift_id: string; clock_in: string; clock_out: string | null }) => {
-          activities.push({
-            id: `${shift.shift_id}-in`,
-            type: "clock_in",
-            description: `${staff.name} clocked in`,
-            timestamp: shift.clock_in,
-          });
-          if (shift.clock_out) {
-            activities.push({
-              id: `${shift.shift_id}-out`,
-              type: "clock_out",
-              description: `${staff.name} clocked out`,
-              timestamp: shift.clock_out,
-            });
-          }
-        });
-
-        // Sort by timestamp descending
-        activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        setRecentActivity(activities.slice(0, 10));
-      }
+      activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setRecentActivity(activities.slice(0, 10));
     } catch (error) {
       logError('CashierPortal.fetchData', error);
       if (isSessionExpiredError(error)) {
@@ -284,7 +261,6 @@ export default function CashierPortal() {
 
   const handleClockIn = async () => {
     if (!staff) return;
-
     const sessionToken = getSessionToken();
     if (!sessionToken) {
       toast.error("Session expired. Please log in again.");
@@ -298,7 +274,6 @@ export default function CashierPortal() {
         p_shop_id: staff.shop_id,
         p_session_token: sessionToken
       });
-
       if (error) throw error;
 
       setIsClockedIn(true);
@@ -318,13 +293,11 @@ export default function CashierPortal() {
     }
   };
 
-  // Cashiers must close their shift when clocking out
   const handleClockOut = () => {
     if (!currentShiftId || !currentShiftStart) {
       toast.error("No active shift found");
       return;
     }
-    // Open the close shift modal instead of directly clocking out
     setShowCloseShiftModal(true);
   };
 
@@ -350,6 +323,8 @@ export default function CashierPortal() {
   };
 
   if (!staff) return null;
+
+  const netToday = summary.shopRevenue - summary.shopExpenses;
 
   return (
     <AnimatedPage>
@@ -378,51 +353,7 @@ export default function CashierPortal() {
           </div>
         </header>
 
-        {/* View Toggle */}
-        <div className="px-5 mb-4">
-          <div className="flex gap-2 bg-secondary/50 p-1 rounded-2xl">
-            <button
-              onClick={() => setActiveView("dashboard")}
-              className={`flex-1 py-3 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 ${
-                activeView === "dashboard"
-                  ? "bg-card text-foreground shadow-md"
-                  : "text-muted-foreground"
-              }`}
-            >
-              <DollarSign className="w-4 h-4" />
-              Dashboard
-            </button>
-            <button
-              onClick={() => setActiveView("appointments")}
-              className={`flex-1 py-3 rounded-xl font-medium text-sm transition-colors flex items-center justify-center gap-2 relative ${
-                activeView === "appointments"
-                  ? "bg-card text-foreground shadow-md"
-                  : "text-muted-foreground"
-              }`}
-            >
-              <CalendarDays className="w-4 h-4" />
-              Appointments
-              {pendingAppointmentsCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center">
-                  {pendingAppointmentsCount > 99 ? "99+" : pendingAppointmentsCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {activeView === "appointments" ? (
-          <div className="px-5">
-            <AppointmentsTab
-              shopId={staff.shop_id}
-              cashierId={staff.id}
-              sessionToken={getSessionToken() || ''}
-              isClockedIn={isClockedIn}
-              onPaymentConfirmed={fetchData}
-            />
-          </div>
-        ) : (
-          <div className="px-5 space-y-4">
+        <div className="px-5 space-y-4">
           {/* My Services Today Card */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -479,6 +410,24 @@ export default function CashierPortal() {
             </Button>
           </motion.div>
 
+          {/* Clock in to start prompt */}
+          {!isClockedIn && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+              className="rounded-2xl bg-card border border-border p-4 flex items-center gap-4"
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="font-display text-foreground text-base">Clock in to start</p>
+                <p className="text-sm text-muted-foreground">You need to clock in before recording services</p>
+              </div>
+            </motion.div>
+          )}
+
           {/* Record Payment Button */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -499,6 +448,27 @@ export default function CashierPortal() {
             </Button>
           </motion.div>
 
+          {/* Add Expense Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.17 }}
+          >
+            <Button
+              onClick={() => setShowExpenseModal(true)}
+              disabled={!isClockedIn}
+              variant="outline"
+              className={`w-full h-14 rounded-xl text-lg font-medium gap-2 border-2 ${
+                isClockedIn
+                  ? "border-muted-foreground text-foreground hover:bg-muted"
+                  : "border-muted text-muted-foreground"
+              }`}
+            >
+              <TrendingDown className="w-5 h-5" />
+              Add Expense
+            </Button>
+          </motion.div>
+
           {/* Shop Today Stats */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -507,17 +477,66 @@ export default function CashierPortal() {
             className="rounded-2xl bg-card border border-border p-5"
           >
             <h3 className="font-display text-lg text-foreground mb-3">Shop Today</h3>
-            <div className="flex items-center justify-between">
+            <div className="grid grid-cols-3 gap-2 mb-3">
               <div>
                 <p className="text-sm text-muted-foreground">Total Services</p>
                 <p className="text-2xl font-display text-foreground">{summary.shopServicesCount}</p>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
+              <div>
+                <p className="text-sm text-muted-foreground">Revenue</p>
                 <p className="text-2xl font-display text-green-500">
                   GH₵{summary.shopRevenue.toFixed(0)}
                 </p>
               </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Expenses</p>
+                <p className="text-2xl font-display text-destructive">
+                  GH₵{summary.shopExpenses.toFixed(0)}
+                </p>
+              </div>
+            </div>
+            <div className="border-t border-border pt-3 flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">Net Today</p>
+              <p className={`text-2xl font-display ${netToday >= 0 ? 'text-green-500' : 'text-destructive'}`}>
+                GH₵{netToday.toFixed(0)}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Barber Cuts Today */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="rounded-2xl bg-card border border-border p-5"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Scissors className="w-5 h-5 text-primary" />
+              <h3 className="font-display text-lg text-foreground">Barber Cuts Today</h3>
+            </div>
+            <div className="space-y-0">
+              {barberCuts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-2">No barbers found</p>
+              ) : (
+                barberCuts.map((barber, index) => (
+                  <div
+                    key={barber.id}
+                    className={`flex items-center justify-between py-3 ${
+                      index < barberCuts.length - 1 ? 'border-b border-border' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <Scissors className="w-4 h-4 text-green-500" />
+                      </div>
+                      <span className="text-foreground font-medium">{barber.name}</span>
+                    </div>
+                    <span className="text-sm text-green-500 font-medium bg-green-500/10 px-3 py-1 rounded-full">
+                      {barber.cutCount} cuts
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </motion.div>
 
@@ -525,7 +544,7 @@ export default function CashierPortal() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
+            transition={{ delay: 0.3 }}
           >
             <h3 className="font-display text-lg text-foreground mb-3">My Recent Activity</h3>
             <div className="space-y-2">
@@ -539,7 +558,7 @@ export default function CashierPortal() {
                     key={activity.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.3 + index * 0.05 }}
+                    transition={{ delay: 0.35 + index * 0.05 }}
                     className="rounded-2xl bg-card border border-border p-4"
                   >
                     <p className="text-foreground text-sm">{activity.description}</p>
@@ -552,12 +571,20 @@ export default function CashierPortal() {
             </div>
           </motion.div>
         </div>
-        )}
 
         {/* Record Payment Modal */}
         <RecordPaymentModal
           isOpen={showPaymentModal}
           onClose={() => setShowPaymentModal(false)}
+          shopId={staff.shop_id}
+          cashierId={staff.id}
+          onSuccess={fetchData}
+        />
+
+        {/* Add Expense Modal */}
+        <AddExpenseModal
+          isOpen={showExpenseModal}
+          onClose={() => setShowExpenseModal(false)}
           shopId={staff.shop_id}
           cashierId={staff.id}
           onSuccess={fetchData}
