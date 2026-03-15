@@ -202,6 +202,9 @@ export default function Dashboard() {
           </motion.div>
         </div>
 
+        {/* Barber Leaderboard */}
+        {user && <BarberLeaderboard ownerId={user.id} />}
+
         {/* Live Activity Feed */}
         {user && (
           <motion.div
