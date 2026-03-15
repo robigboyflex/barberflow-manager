@@ -9,6 +9,7 @@ import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import ShopsManagementSheet from "@/components/dashboard/ShopsManagementSheet";
 import StaffManagementSheet from "@/components/dashboard/StaffManagementSheet";
 import SalaryAlertsCard from "@/components/dashboard/SalaryAlertsCard";
+import BarberLeaderboard from "@/components/dashboard/BarberLeaderboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useShops } from "@/hooks/useShops";
 import { Skeleton } from "@/components/ui/skeleton";
