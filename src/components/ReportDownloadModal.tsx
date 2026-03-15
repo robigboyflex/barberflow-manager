@@ -244,10 +244,10 @@ export default function ReportDownloadModal({
     start: Date,
     end: Date
   ) => {
-    // Generate CSV with Excel-compatible encoding
     const periodLabel = `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
+    const barberBreakdown = getBarberBreakdown(cuts);
     
-    let csv = "\uFEFF"; // BOM for Excel
+    let csv = "\uFEFF";
     csv += "BarberFlow Revenue Report\n";
     csv += `Period: ${periodLabel}\n\n`;
     
@@ -256,6 +256,13 @@ export default function ReportDownloadModal({
     csv += `Total Expenses\t${formatCurrency(totalExpenses)}\n`;
     csv += `Net Profit\t${formatCurrency(netProfit)}\n`;
     csv += `Total Cuts\t${totalCuts}\n\n`;
+
+    csv += "BARBER PERFORMANCE\n";
+    csv += "Rank\tBarber\tCuts\tRevenue\n";
+    barberBreakdown.forEach((b, i) => {
+      csv += `${i + 1}\t${b.name}\t${b.cuts}\t${Number(b.revenue).toFixed(2)}\n`;
+    });
+    csv += `\tTotal\t${barberBreakdown.reduce((s, b) => s + b.cuts, 0)}\t${barberBreakdown.reduce((s, b) => s + b.revenue, 0).toFixed(2)}\n\n`;
     
     csv += "CUTS DETAIL\n";
     csv += "Date\tShop\tBarber\tService\tAmount\tStatus\n";
@@ -265,6 +272,7 @@ export default function ReportDownloadModal({
       const service = cut.services as any;
       csv += `${new Date(cut.created_at).toLocaleString()}\t${shop?.name || "N/A"}\t${barber?.name || "N/A"}\t${service?.name || "N/A"}\t${Number(cut.price).toFixed(2)}\t${cut.status}\n`;
     });
+    csv += `\t\t\tTotal (${totalCuts} cuts)\t${totalRevenue.toFixed(2)}\t\n`;
     
     csv += "\nEXPENSES DETAIL\n";
     csv += "Date\tShop\tCategory\tDescription\tAmount\n";
@@ -272,6 +280,7 @@ export default function ReportDownloadModal({
       const shop = expense.shops as any;
       csv += `${expense.expense_date}\t${shop?.name || "N/A"}\t${expense.category}\t${expense.description}\t${Number(expense.amount).toFixed(2)}\n`;
     });
+    csv += `\t\t\tTotal\t${totalExpenses.toFixed(2)}\n`;
 
     downloadFile(csv, `barberflow-report-${timePeriod}.xls`, "application/vnd.ms-excel");
   };
