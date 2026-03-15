@@ -171,6 +171,19 @@ export default function ReportDownloadModal({
     }
   };
 
+  const getBarberBreakdown = (cuts: any[]) => {
+    const map = new Map<string, { name: string; cuts: number; revenue: number }>();
+    cuts.forEach(cut => {
+      if (cut.status !== "confirmed") return;
+      const barber = cut.staff as any;
+      const name = barber?.name || "Unknown";
+      const existing = map.get(name);
+      if (existing) { existing.cuts++; existing.revenue += Number(cut.price); }
+      else { map.set(name, { name, cuts: 1, revenue: Number(cut.price) }); }
+    });
+    return Array.from(map.values()).sort((a, b) => b.cuts - a.cuts);
+  };
+
   const generateCSV = (
     cuts: any[],
     expenses: any[],
@@ -182,6 +195,7 @@ export default function ReportDownloadModal({
     end: Date
   ) => {
     const periodLabel = `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
+    const barberBreakdown = getBarberBreakdown(cuts);
     
     let csv = "BarberFlow Revenue Report\n";
     csv += `Period: ${periodLabel}\n\n`;
@@ -191,6 +205,13 @@ export default function ReportDownloadModal({
     csv += `Total Expenses,${formatCurrency(totalExpenses)}\n`;
     csv += `Net Profit,${formatCurrency(netProfit)}\n`;
     csv += `Total Cuts,${totalCuts}\n\n`;
+
+    csv += "BARBER PERFORMANCE\n";
+    csv += "Rank,Barber,Cuts,Revenue\n";
+    barberBreakdown.forEach((b, i) => {
+      csv += `${i + 1},${b.name},${b.cuts},${formatCurrency(b.revenue)}\n`;
+    });
+    csv += `,,Total: ${barberBreakdown.reduce((s, b) => s + b.cuts, 0)},${formatCurrency(barberBreakdown.reduce((s, b) => s + b.revenue, 0))}\n\n`;
     
     csv += "CUTS DETAIL\n";
     csv += "Date,Shop,Barber,Service,Amount,Status\n";
@@ -200,6 +221,7 @@ export default function ReportDownloadModal({
       const service = cut.services as any;
       csv += `${new Date(cut.created_at).toLocaleString()},${shop?.name || "N/A"},${barber?.name || "N/A"},${service?.name || "N/A"},${formatCurrency(Number(cut.price))},${cut.status}\n`;
     });
+    csv += `,,,Total (${totalCuts} cuts),${formatCurrency(totalRevenue)},\n`;
     
     csv += "\nEXPENSES DETAIL\n";
     csv += "Date,Shop,Category,Description,Amount\n";
@@ -207,6 +229,7 @@ export default function ReportDownloadModal({
       const shop = expense.shops as any;
       csv += `${expense.expense_date},${shop?.name || "N/A"},${expense.category},${expense.description},${formatCurrency(Number(expense.amount))}\n`;
     });
+    csv += `,,,Total,${formatCurrency(totalExpenses)}\n`;
 
     downloadFile(csv, `barberflow-report-${timePeriod}.csv`, "text/csv");
   };
