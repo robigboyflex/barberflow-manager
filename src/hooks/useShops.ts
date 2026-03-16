@@ -26,6 +26,7 @@ export interface Staff {
 export interface ShopWithStats extends Shop {
   staffCount: number;
   todayRevenue: number;
+  todayExpenses: number;
   cashierOnDuty: string | null; // name of active cashier, or null if none
 }
 
