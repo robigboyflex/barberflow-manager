@@ -596,7 +596,7 @@ function AddStaffInlineModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">
-              {salaryType === "percentage" && role === "barber" ? "Percentage (%)" : "Salary Amount (GH₵)"}
+              {salaryType === "percentage" && role === "barber" ? "Percentage (%) (optional)" : "Salary Amount (GH₵) (optional)"}
             </label>
             <input
               type="number"
