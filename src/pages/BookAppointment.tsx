@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { z } from "zod";
+import { getUserFriendlyError, logError } from "@/lib/errorHandler";
 
 interface Shop {
   id: string;
