@@ -105,18 +105,13 @@ export default function BookAppointment() {
 
       setServices(servicesData || []);
 
-      // Fetch barbers
+      // Fetch barbers via public RPC (no auth needed, returns only id+name)
       const { data: barbersData } = await supabase
-        .from("staff")
-        .select("id, name")
-        .eq("shop_id", shopId)
-        .eq("role", "barber")
-        .eq("is_active", true)
-        .order("name");
+        .rpc("get_public_shop_barbers", { p_shop_id: shopId });
 
       setBarbers(barbersData || []);
     } catch (error) {
-      console.error("Error fetching shop data:", error);
+      logError("BookAppointment.fetchShopData", error);
       toast.error("Failed to load shop information");
     } finally {
       setIsLoading(false);
@@ -126,7 +121,20 @@ export default function BookAppointment() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!customerName || !customerPhone || !selectedService || !selectedDate || !selectedTime) {
+    // Validate with Zod
+    const validation = bookingSchema.safeParse({
+      customerName,
+      customerPhone,
+      notes: notes || undefined,
+    });
+
+    if (!validation.success) {
+      const firstError = validation.error.errors[0]?.message;
+      toast.error(firstError || "Please check your input");
+      return;
+    }
+
+    if (!selectedService || !selectedDate || !selectedTime) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -138,13 +146,13 @@ export default function BookAppointment() {
         .from("appointments")
         .insert({
           shop_id: shopId,
-          customer_name: customerName.trim(),
-          customer_phone: customerPhone.trim(),
+          customer_name: validation.data.customerName,
+          customer_phone: validation.data.customerPhone,
           service_id: selectedService,
           preferred_barber_id: selectedBarber === "no_preference" ? null : selectedBarber || null,
           preferred_date: format(selectedDate, "yyyy-MM-dd"),
           preferred_time: selectedTime,
-          notes: notes.trim() || null,
+          notes: validation.data.notes?.trim() || null,
         });
 
       if (error) throw error;
@@ -152,8 +160,8 @@ export default function BookAppointment() {
       setIsSuccess(true);
       toast.success("Appointment booked successfully!");
     } catch (error) {
-      console.error("Error booking appointment:", error);
-      toast.error("Failed to book appointment. Please try again.");
+      logError("BookAppointment.handleSubmit", error);
+      toast.error(getUserFriendlyError(error, "book appointment"));
     } finally {
       setIsSubmitting(false);
     }
