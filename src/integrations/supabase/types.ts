@@ -869,6 +869,22 @@ export type Database = {
           status: Database["public"]["Enums"]["cut_status"]
         }[]
       }
+      get_shop_expenses_for_cashier: {
+        Args: {
+          p_cashier_id: string
+          p_end_date?: string
+          p_session_token: string
+          p_start_date?: string
+        }
+        Returns: {
+          amount: number
+          category: string
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+        }[]
+      }
       get_shop_services: {
         Args: { p_session_token: string; p_shop_id: string; p_staff_id: string }
         Returns: {

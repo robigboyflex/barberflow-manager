@@ -37,53 +37,25 @@ export function useShops() {
   useEffect(() => {
     if (!user || loading) return;
 
+    // Debounce invalidation to prevent rapid re-renders from multiple realtime events
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const invalidateShops = () => {
-      queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
+      }, 500);
     };
 
-    const cutsChannel = supabase
-      .channel(`cuts-realtime-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'cuts',
-        },
-        invalidateShops
-      )
-      .subscribe();
-
-    const expensesChannel = supabase
-      .channel(`expenses-realtime-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'expenses',
-        },
-        invalidateShops
-      )
-      .subscribe();
-
-    const shiftsChannel = supabase
-      .channel(`shifts-realtime-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'shifts',
-        },
-        invalidateShops
-      )
+    const realtimeChannel = supabase
+      .channel(`owner-realtime-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cuts' }, invalidateShops)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, invalidateShops)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, invalidateShops)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(cutsChannel);
-      supabase.removeChannel(expensesChannel);
-      supabase.removeChannel(shiftsChannel);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(realtimeChannel);
     };
   }, [user, loading, queryClient]);
 

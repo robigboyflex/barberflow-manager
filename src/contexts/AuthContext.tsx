@@ -21,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    let initialized = false;
 
     const applySession = (nextSession: Session | null) => {
       if (!isMounted) return;
@@ -32,33 +33,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       try {
         const { data: { session: existingSession } } = await supabase.auth.getSession();
-
-        const shouldRefreshSession =
-          !!existingSession?.refresh_token &&
-          !!existingSession?.expires_at &&
-          existingSession.expires_at * 1000 <= Date.now() + SESSION_REFRESH_BUFFER_MS;
-
-        if (shouldRefreshSession) {
-          const { data, error } = await supabase.auth.refreshSession();
-
-          if (error) {
-            applySession(null);
-            return;
-          }
-
-          applySession(data.session);
-          return;
-        }
-
         applySession(existingSession);
       } catch {
         applySession(null);
+      } finally {
+        initialized = true;
       }
     };
 
     void initializeAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // Only process auth state changes after initial load to prevent flicker
+      if (!initialized) return;
       applySession(newSession);
     });
 
