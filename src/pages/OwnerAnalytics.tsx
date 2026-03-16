@@ -75,7 +75,7 @@ export default function OwnerAnalytics() {
   const { user } = useAuth();
   const [shops, setShops] = useState<Shop[]>([]);
   const [selectedShop, setSelectedShop] = useState<string>("all");
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("today");
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("month");
   const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
   const [summary, setSummary] = useState<AnalyticsSummary>({
     totalRevenue: 0,
