@@ -489,9 +489,9 @@ function AddStaffInlineModal({
         role,
         phone: phone.trim() || null,
         pin,
-        salary_type: effectiveSalaryType,
-        salary_amount: Number(salaryAmount),
-        salary_pay_day: Number(salaryPayDay),
+        salary_type: salaryAmount ? effectiveSalaryType : null,
+        salary_amount: salaryAmount ? Number(salaryAmount) : null,
+        salary_pay_day: salaryPayDay ? Number(salaryPayDay) : null,
       });
 
       if (error) throw error;
