@@ -165,15 +165,15 @@ export default function CashierPortal() {
       const shopServicesCount = confirmedCuts.length;
       const shopRevenue = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
 
-      // Fetch today's expenses
-      const { data: expensesData } = await supabase
-        .from('expenses')
-        .select('amount')
-        .eq('shop_id', staff.shop_id)
-        .gte('expense_date', today.toISOString().split('T')[0])
-        .lte('expense_date', today.toISOString().split('T')[0]);
+      // Fetch today's expenses via RPC (direct table query blocked by RLS for staff)
+      const { data: expensesData } = await supabase.rpc('get_shop_expenses_for_cashier', {
+        p_cashier_id: staff.id,
+        p_session_token: sessionToken,
+        p_start_date: today.toISOString().split('T')[0],
+        p_end_date: today.toISOString().split('T')[0],
+      });
 
-      const shopExpenses = expensesData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      const shopExpenses = expensesData?.reduce((sum: number, e: any) => sum + Number(e.amount), 0) || 0;
 
       setSummary({ myServicesCount, myEarnings, shopServicesCount, shopRevenue, shopExpenses });
 
