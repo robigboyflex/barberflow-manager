@@ -43,7 +43,7 @@ export default function RecordPaymentModal({
   const [customerName, setCustomerName] = useState("");
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [price, setPrice] = useState("25");
+  const [price, setPrice] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [services, setServices] = useState<Service[]>([]);
