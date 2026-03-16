@@ -452,12 +452,29 @@ export default function ReportDownloadModal({
 </body>
 </html>`;
 
-    // Open in new window for printing/saving as PDF
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.print();
+    // Create a downloadable HTML file for mobile compatibility
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Try opening in a new tab first (works on most browsers)
+    const newWindow = window.open(url, '_blank');
+    
+    if (!newWindow) {
+      // Fallback: download as HTML file if popup blocked (common on mobile)
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `barberflow-report-${timePeriod}.html`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      // Delay cleanup to ensure download starts
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } else {
+      // Cleanup after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     }
   };
 
@@ -467,10 +484,17 @@ export default function ReportDownloadModal({
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    a.style.display = 'none';
     document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // Use setTimeout for mobile Safari compatibility
+    setTimeout(() => {
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }, 100);
   };
 
   if (!isOpen) return null;
