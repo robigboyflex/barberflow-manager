@@ -244,6 +244,35 @@ export default function Auth() {
           />
         </div>
 
+        {mode === "signin" && (
+          <button
+            type="button"
+            onClick={async () => {
+              if (!email) {
+                setError("Please enter your email first");
+                return;
+              }
+              setLoading(true);
+              setError(null);
+              try {
+                const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+                if (resetError) throw resetError;
+                setSuccess(true);
+              } catch (err) {
+                setError(getUserFriendlyError(err, "send reset email"));
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            className="w-full text-right text-sm text-primary font-medium mt-1"
+          >
+            Forgot Password?
+          </button>
+        )}
+
         <motion.button
           type="submit"
           whileTap={{ scale: 0.97 }}
