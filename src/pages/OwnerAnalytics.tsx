@@ -104,6 +104,34 @@ export default function OwnerAnalytics() {
     }
   }, [selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to, user?.id]);
 
+  // Real-time subscriptions for cuts and expenses
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const cutsChannel = supabase
+      .channel("analytics-cuts-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cuts" }, () => {
+        if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
+          fetchAnalytics();
+        }
+      })
+      .subscribe();
+
+    const expensesChannel = supabase
+      .channel("analytics-expenses-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => {
+        if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
+          fetchAnalytics();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(cutsChannel);
+      supabase.removeChannel(expensesChannel);
+    };
+  }, [user?.id, selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to]);
+
   const fetchShops = async () => {
     if (!user) return;
 
