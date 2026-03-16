@@ -804,6 +804,13 @@ export type Database = {
           status: Database["public"]["Enums"]["cut_status"]
         }[]
       }
+      get_public_shop_barbers: {
+        Args: { p_shop_id: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
       get_shop_activities: {
         Args: { p_limit?: number; p_owner_id: string; p_shop_id?: string }
         Returns: {
