@@ -163,12 +163,15 @@ export default function OwnerAnalytics() {
         break;
       case "week":
         start.setDate(now.getDate() - 7);
+        start.setHours(0, 0, 0, 0);
         break;
       case "month":
         start.setMonth(now.getMonth() - 1);
+        start.setHours(0, 0, 0, 0);
         break;
       case "year":
         start.setFullYear(now.getFullYear() - 1);
+        start.setHours(0, 0, 0, 0);
         break;
       case "custom":
         if (dateRange.from && dateRange.to) {
@@ -176,12 +179,26 @@ export default function OwnerAnalytics() {
           customStart.setHours(0, 0, 0, 0);
           const customEnd = new Date(dateRange.to);
           customEnd.setHours(23, 59, 59, 999);
-          return { start: customStart.toISOString(), end: customEnd.toISOString() };
+          return {
+            start: customStart,
+            end: customEnd,
+            startIso: customStart.toISOString(),
+            endIso: customEnd.toISOString(),
+            startDate: format(customStart, "yyyy-MM-dd"),
+            endDate: format(customEnd, "yyyy-MM-dd"),
+          };
         }
-        return { start: start.toISOString(), end: now.toISOString() };
+        break;
     }
     
-    return { start: start.toISOString(), end: now.toISOString() };
+    return {
+      start,
+      end: now,
+      startIso: start.toISOString(),
+      endIso: now.toISOString(),
+      startDate: format(start, "yyyy-MM-dd"),
+      endDate: format(now, "yyyy-MM-dd"),
+    };
   };
 
   const fetchAnalytics = async () => {
@@ -189,15 +206,22 @@ export default function OwnerAnalytics() {
     setIsLoading(true);
 
     try {
-      const { start, end } = getDateRangeForPeriod(timePeriod);
+      const { startIso, endIso, startDate, endDate } = getDateRangeForPeriod(timePeriod);
       const shopIds = selectedShop === "all" ? shops.map((s) => s.id) : [selectedShop];
 
       if (shopIds.length === 0) {
+        setSummary({
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          totalCuts: 0,
+          avgRevenuePerCut: 0,
+        });
+        setBarberStats([]);
         setIsLoading(false);
         return;
       }
 
-      // Fetch cuts
       const { data: cutsData, error: cutsError } = await supabase
         .from("cuts")
         .select(`
@@ -205,29 +229,28 @@ export default function OwnerAnalytics() {
           price,
           status,
           barber_id,
+          confirmed_at,
           staff!cuts_barber_id_fkey (id, name)
         `)
         .in("shop_id", shopIds)
-        .in("status", ["confirmed", "pending"])
-        .gte("created_at", start)
-        .lte("created_at", end);
+        .eq("status", "confirmed")
+        .gte("confirmed_at", startIso)
+        .lte("confirmed_at", endIso);
 
       if (cutsError) throw cutsError;
 
-      // Fetch expenses
       const { data: expensesData, error: expensesError } = await supabase
         .from("expenses")
-        .select("amount")
+        .select("amount, expense_date")
         .in("shop_id", shopIds)
-        .gte("created_at", start)
-        .lte("created_at", end);
+        .gte("expense_date", startDate)
+        .lte("expense_date", endDate);
 
       if (expensesError) throw expensesError;
 
-      // Calculate summary
-      const confirmedCuts = cutsData?.filter((c) => c.status === "confirmed") || [];
-      const totalRevenue = confirmedCuts.reduce((sum, c) => sum + Number(c.price), 0);
-      const totalExpenses = expensesData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+      const confirmedCuts = cutsData || [];
+      const totalRevenue = confirmedCuts.reduce((sum, cut) => sum + Number(cut.price || 0), 0);
+      const totalExpenses = expensesData?.reduce((sum, expense) => sum + Number(expense.amount || 0), 0) || 0;
       const totalCuts = confirmedCuts.length;
 
       setSummary({
@@ -238,29 +261,31 @@ export default function OwnerAnalytics() {
         avgRevenuePerCut: totalCuts > 0 ? totalRevenue / totalCuts : 0,
       });
 
-      // Calculate barber stats
       const barberMap = new Map<string, BarberStats>();
-      cutsData?.forEach((cut) => {
-        const barber = cut.staff as unknown as { id: string; name: string };
-        if (barber && cut.status === "confirmed") {
-          const existing = barberMap.get(barber.id);
-          if (existing) {
-            existing.cutsCount++;
-            existing.revenue += Number(cut.price);
-          } else {
-            barberMap.set(barber.id, {
-              id: barber.id,
-              name: barber.name,
-              cutsCount: 1,
-              revenue: Number(cut.price),
-            });
-          }
+      confirmedCuts.forEach((cut) => {
+        const barber = cut.staff as unknown as { id: string; name: string } | null;
+        if (!barber) return;
+
+        const existing = barberMap.get(barber.id);
+        if (existing) {
+          existing.cutsCount += 1;
+          existing.revenue += Number(cut.price || 0);
+          return;
         }
+
+        barberMap.set(barber.id, {
+          id: barber.id,
+          name: barber.name,
+          cutsCount: 1,
+          revenue: Number(cut.price || 0),
+        });
       });
 
-      const barberStatsArray = Array.from(barberMap.values()).sort(
-        (a, b) => b.cutsCount - a.cutsCount
-      );
+      const barberStatsArray = Array.from(barberMap.values()).sort((a, b) => {
+        if (b.cutsCount !== a.cutsCount) return b.cutsCount - a.cutsCount;
+        return b.revenue - a.revenue;
+      });
+
       setBarberStats(barberStatsArray);
     } catch (error) {
       console.error("Error fetching analytics:", error);
