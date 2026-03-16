@@ -470,11 +470,11 @@ function AddStaffInlineModal({
       toast.error("PIN must contain only numbers");
       return;
     }
-    if (!salaryAmount || isNaN(Number(salaryAmount)) || Number(salaryAmount) < 0) {
+    if (salaryAmount && (isNaN(Number(salaryAmount)) || Number(salaryAmount) < 0)) {
       toast.error("Please enter a valid salary amount");
       return;
     }
-    if (!salaryPayDay || isNaN(Number(salaryPayDay)) || Number(salaryPayDay) < 1 || Number(salaryPayDay) > 31) {
+    if (salaryPayDay && (isNaN(Number(salaryPayDay)) || Number(salaryPayDay) < 1 || Number(salaryPayDay) > 31)) {
       toast.error("Salary pay day must be between 1 and 31");
       return;
     }
