@@ -87,12 +87,6 @@ export default function RecordPaymentModal({
 
       if (!servicesError) {
         setServices(servicesData || []);
-
-        // Set default service price if available
-        if (servicesData && servicesData.length > 0) {
-          setSelectedService(servicesData[0].id);
-          setPrice(servicesData[0].price.toString());
-        }
       }
     } catch (error) {
       logError('RecordPaymentModal.fetchData', error);
