@@ -22,6 +22,12 @@ import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { getUserFriendlyError, logError } from "@/lib/errorHandler";
 
+const bookingSchema = z.object({
+  customerName: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name must be under 100 characters"),
+  customerPhone: z.string().trim().min(7, "Phone number too short").max(20, "Phone number too long").regex(/^[+\d\s()-]+$/, "Invalid phone number format"),
+  notes: z.string().max(500, "Notes must be under 500 characters").optional(),
+});
+
 interface Shop {
   id: string;
   name: string;
