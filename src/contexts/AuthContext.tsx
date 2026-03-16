@@ -21,9 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const initialized = useRef(false);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
     let isMounted = true;
 
     const applySession = (nextSession: Session | null) => {
