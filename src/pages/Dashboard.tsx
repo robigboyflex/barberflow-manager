@@ -28,9 +28,11 @@ export default function Dashboard() {
   // Calculate stats from real data
   const stats = {
     todayRevenue: shops?.reduce((sum, shop) => sum + shop.todayRevenue, 0) || 0,
+    todayExpenses: shops?.reduce((sum, shop) => sum + shop.todayExpenses, 0) || 0,
     totalShops: shops?.length || 0,
     totalStaff: shops?.reduce((sum, shop) => sum + shop.staffCount, 0) || 0,
   };
+  const netRevenue = stats.todayRevenue - stats.todayExpenses;
 
   // Get user's first name from metadata or email
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 
@@ -72,10 +74,10 @@ export default function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-primary-foreground/80 text-sm font-medium mb-1">
-                Today's Revenue
+                Today's Net Revenue
               </p>
               <h2 className="text-4xl font-display text-primary-foreground tracking-wide">
-                {formatCurrency(stats.todayRevenue)}
+                {formatCurrency(netRevenue)}
               </h2>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center">

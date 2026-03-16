@@ -26,6 +26,7 @@ export interface Staff {
 export interface ShopWithStats extends Shop {
   staffCount: number;
   todayRevenue: number;
+  todayExpenses: number;
   cashierOnDuty: string | null; // name of active cashier, or null if none
 }
 
@@ -115,6 +116,15 @@ export function useShops() {
 
       if (cutsError) throw cutsError;
 
+      // Fetch today's expenses for each shop
+      const { data: expensesData, error: expensesError } = await supabase
+        .from("expenses")
+        .select("shop_id, amount")
+        .in("shop_id", shopIds)
+        .eq("expense_date", todayStart.toISOString().split('T')[0]);
+
+      if (expensesError) throw expensesError;
+
       // Fetch active shifts (open, not closed) to determine cashier on duty
       const { data: activeShifts, error: shiftsError } = await supabase
         .from("shifts")
@@ -157,11 +167,18 @@ export function useShops() {
         revenueMap[c.shop_id] = (revenueMap[c.shop_id] || 0) + Number(c.price);
       });
 
+      // Calculate expenses per shop
+      const expensesMap: Record<string, number> = {};
+      expensesData?.forEach(e => {
+        expensesMap[e.shop_id] = (expensesMap[e.shop_id] || 0) + Number(e.amount);
+      });
+
       // Combine data
       return shops.map(shop => ({
         ...shop,
         staffCount: staffCountMap[shop.id] || 0,
         todayRevenue: revenueMap[shop.id] || 0,
+        todayExpenses: expensesMap[shop.id] || 0,
         cashierOnDuty: cashierMap[shop.id] || null,
       }));
     },
