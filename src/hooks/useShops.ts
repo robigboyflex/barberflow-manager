@@ -31,15 +31,18 @@ export interface ShopWithStats extends Shop {
 }
 
 export function useShops() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const queryClient = useQueryClient();
 
-  // Set up realtime subscription for cuts
   useEffect(() => {
-    if (!user) return;
+    if (!user || loading) return;
+
+    const invalidateShops = () => {
+      queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
+    };
 
     const cutsChannel = supabase
-      .channel('cuts-realtime')
+      .channel(`cuts-realtime-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -47,14 +50,25 @@ export function useShops() {
           schema: 'public',
           table: 'cuts',
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
-        }
+        invalidateShops
+      )
+      .subscribe();
+
+    const expensesChannel = supabase
+      .channel(`expenses-realtime-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'expenses',
+        },
+        invalidateShops
       )
       .subscribe();
 
     const shiftsChannel = supabase
-      .channel('shifts-realtime')
+      .channel(`shifts-realtime-${user.id}`)
       .on(
         'postgres_changes',
         {
@@ -62,24 +76,22 @@ export function useShops() {
           schema: 'public',
           table: 'shifts',
         },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ["shops", user.id] });
-        }
+        invalidateShops
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(cutsChannel);
+      supabase.removeChannel(expensesChannel);
       supabase.removeChannel(shiftsChannel);
     };
-  }, [user, queryClient]);
+  }, [user, loading, queryClient]);
 
   return useQuery({
     queryKey: ["shops", user?.id],
     queryFn: async (): Promise<ShopWithStats[]> => {
       if (!user) return [];
 
-      // Fetch shops
       const { data: shops, error: shopsError } = await supabase
         .from("shops")
         .select("*")
@@ -87,94 +99,84 @@ export function useShops() {
         .order("created_at", { ascending: false });
 
       if (shopsError) throw shopsError;
-      if (!shops || shops.length === 0) return [];
+      if (!shops?.length) return [];
 
-      // Fetch staff counts and cashier names for each shop
-      const shopIds = shops.map(s => s.id);
-      const { data: staffData, error: staffError } = await supabase
-        .from("staff")
-        .select("shop_id, name, role")
-        .in("shop_id", shopIds)
-        .eq("is_active", true);
-
-      if (staffError) throw staffError;
-
-      // Get today's date range
+      const shopIds = shops.map((shop) => shop.id);
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
+      const todayDate = todayStart.toISOString().split('T')[0];
 
-      // Fetch today's confirmed cuts for each shop
-      const { data: cutsData, error: cutsError } = await supabase
-        .from("cuts")
-        .select("shop_id, price, status")
-        .in("shop_id", shopIds)
-        .gte("created_at", todayStart.toISOString())
-        .lte("created_at", todayEnd.toISOString())
-        .eq("status", "confirmed");
-
-      if (cutsError) throw cutsError;
-
-      // Fetch today's expenses for each shop
-      const { data: expensesData, error: expensesError } = await supabase
-        .from("expenses")
-        .select("shop_id, amount")
-        .in("shop_id", shopIds)
-        .eq("expense_date", todayStart.toISOString().split('T')[0]);
-
-      if (expensesError) throw expensesError;
-
-      // Fetch active shifts (open, not closed) to determine cashier on duty
-      const { data: activeShifts, error: shiftsError } = await supabase
-        .from("shifts")
-        .select("shop_id, staff_id")
-        .in("shop_id", shopIds)
-        .eq("is_closed", false)
-        .is("clock_out", null);
-
-      if (shiftsError) throw shiftsError;
-
-      // Map active shift staff_ids to cashier names
-      const cashierMap: Record<string, string> = {};
-      if (activeShifts && activeShifts.length > 0) {
-        const activeStaffIds = activeShifts.map(s => s.staff_id);
-        // Find which of these are cashiers
-        const cashierStaff = staffData?.filter(
-          s => s.role === "cashier" && activeStaffIds.includes(s.shop_id ? "" : "")
-        );
-        // Build a staff_id -> name lookup from staffData by fetching the actual staff
-        const { data: shiftStaffData } = await supabase
+      const [staffResult, cutsResult, expensesResult, shiftsResult] = await Promise.all([
+        supabase
           .from("staff")
-          .select("id, name, role, shop_id")
-          .in("id", activeStaffIds)
-          .eq("role", "cashier");
+          .select("id, shop_id, name, role")
+          .in("shop_id", shopIds)
+          .eq("is_active", true),
+        supabase
+          .from("cuts")
+          .select("shop_id, price")
+          .in("shop_id", shopIds)
+          .gte("confirmed_at", todayStart.toISOString())
+          .lte("confirmed_at", todayEnd.toISOString())
+          .eq("status", "confirmed"),
+        supabase
+          .from("expenses")
+          .select("shop_id, amount")
+          .in("shop_id", shopIds)
+          .eq("expense_date", todayDate),
+        supabase
+          .from("shifts")
+          .select("shop_id, staff_id")
+          .in("shop_id", shopIds)
+          .eq("is_closed", false)
+          .is("clock_out", null),
+      ]);
 
-        shiftStaffData?.forEach(s => {
-          cashierMap[s.shop_id] = s.name;
-        });
-      }
+      if (staffResult.error) throw staffResult.error;
+      if (cutsResult.error) throw cutsResult.error;
+      if (expensesResult.error) throw expensesResult.error;
+      if (shiftsResult.error) throw shiftsResult.error;
 
-      // Count staff per shop
+      const staffData = staffResult.data ?? [];
+      const cutsData = cutsResult.data ?? [];
+      const expensesData = expensesResult.data ?? [];
+      const activeShifts = shiftsResult.data ?? [];
+
       const staffCountMap: Record<string, number> = {};
-      staffData?.forEach(s => {
-        staffCountMap[s.shop_id] = (staffCountMap[s.shop_id] || 0) + 1;
+      const cashierById = new Map<string, { shop_id: string; name: string }>();
+
+      staffData.forEach((staffMember) => {
+        staffCountMap[staffMember.shop_id] = (staffCountMap[staffMember.shop_id] || 0) + 1;
+
+        if (staffMember.role === "cashier") {
+          cashierById.set(staffMember.id, {
+            shop_id: staffMember.shop_id,
+            name: staffMember.name,
+          });
+        }
       });
 
-      // Calculate revenue per shop
       const revenueMap: Record<string, number> = {};
-      cutsData?.forEach(c => {
-        revenueMap[c.shop_id] = (revenueMap[c.shop_id] || 0) + Number(c.price);
+      cutsData.forEach((cut) => {
+        revenueMap[cut.shop_id] = (revenueMap[cut.shop_id] || 0) + Number(cut.price);
       });
 
-      // Calculate expenses per shop
       const expensesMap: Record<string, number> = {};
-      expensesData?.forEach(e => {
-        expensesMap[e.shop_id] = (expensesMap[e.shop_id] || 0) + Number(e.amount);
+      expensesData.forEach((expense) => {
+        expensesMap[expense.shop_id] = (expensesMap[expense.shop_id] || 0) + Number(expense.amount);
       });
 
-      // Combine data
-      return shops.map(shop => ({
+      const cashierMap: Record<string, string> = {};
+      activeShifts.forEach((shift) => {
+        const cashier = cashierById.get(shift.staff_id);
+        if (cashier) {
+          cashierMap[cashier.shop_id] = cashier.name;
+        }
+      });
+
+      return shops.map((shop) => ({
         ...shop,
         staffCount: staffCountMap[shop.id] || 0,
         todayRevenue: revenueMap[shop.id] || 0,
@@ -182,7 +184,7 @@ export function useShops() {
         cashierOnDuty: cashierMap[shop.id] || null,
       }));
     },
-    enabled: !!user,
+    enabled: !loading && !!user,
   });
 }
 

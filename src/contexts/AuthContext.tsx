@@ -12,6 +12,7 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const SESSION_REFRESH_BUFFER_MS = 30_000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -20,34 +21,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const initialized = useRef(false);
 
   useEffect(() => {
-    // Prevent double initialization in strict mode
     if (initialized.current) return;
     initialized.current = true;
 
-    // Get existing session first
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
+    let isMounted = true;
+
+    const applySession = (nextSession: Session | null) => {
+      if (!isMounted) return;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
       setLoading(false);
+    };
+
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+
+        const shouldRefreshSession =
+          !!existingSession?.refresh_token &&
+          !!existingSession?.expires_at &&
+          existingSession.expires_at * 1000 <= Date.now() + SESSION_REFRESH_BUFFER_MS;
+
+        if (shouldRefreshSession) {
+          const { data, error } = await supabase.auth.refreshSession();
+
+          if (error) {
+            applySession(null);
+            return;
+          }
+
+          applySession(data.session);
+          return;
+        }
+
+        applySession(existingSession);
+      } catch {
+        applySession(null);
+      }
+    };
+
+    void initializeAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      applySession(newSession);
     });
 
-    // Set up auth state listener for future changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        // Only update state on actual auth events, not during initial load
-        if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-          setSession(newSession);
-          setUser(newSession?.user ?? null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
