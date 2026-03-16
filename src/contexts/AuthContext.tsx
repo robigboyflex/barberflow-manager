@@ -45,9 +45,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void initializeAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       // Only process auth state changes after initial load to prevent flicker
       if (!initialized) return;
+      
+      // Clear all cached queries on sign-out or sign-in so stale data is never served
+      if (event === 'SIGNED_OUT') {
+        queryClient.clear();
+      } else if (event === 'SIGNED_IN') {
+        queryClient.invalidateQueries();
+      }
+      
       applySession(newSession);
     });
 
