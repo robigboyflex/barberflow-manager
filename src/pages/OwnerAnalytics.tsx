@@ -104,31 +104,35 @@ export default function OwnerAnalytics() {
     }
   }, [selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to, user?.id]);
 
-  // Real-time subscriptions for cuts and expenses
+  // Real-time subscriptions for cuts and expenses + polling fallback
   useEffect(() => {
     if (!user?.id) return;
+
+    const shouldFetch = () => timePeriod !== "custom" || (dateRange.from && dateRange.to);
 
     const cutsChannel = supabase
       .channel("analytics-cuts-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "cuts" }, () => {
-        if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
-          fetchAnalytics();
-        }
+        if (shouldFetch()) fetchAnalytics();
       })
       .subscribe();
 
     const expensesChannel = supabase
       .channel("analytics-expenses-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => {
-        if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
-          fetchAnalytics();
-        }
+        if (shouldFetch()) fetchAnalytics();
       })
       .subscribe();
+
+    // Polling fallback every 15 seconds in case realtime events are missed
+    const pollInterval = setInterval(() => {
+      if (shouldFetch()) fetchAnalytics();
+    }, 15000);
 
     return () => {
       supabase.removeChannel(cutsChannel);
       supabase.removeChannel(expensesChannel);
+      clearInterval(pollInterval);
     };
   }, [user?.id, selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to]);
 
