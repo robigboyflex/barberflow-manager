@@ -330,7 +330,7 @@ export default function RecordPaymentModal({
             {/* Submit Button */}
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting || !selectedBarber || !selectedService}
+              disabled={isSubmitting || !selectedBarber || !selectedService || !paymentMethod || !price || parseFloat(price) <= 0}
               className="w-full h-14 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-lg font-medium"
             >
               {isSubmitting ? "Recording..." : "Record Service"}
