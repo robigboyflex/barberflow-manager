@@ -1,0 +1,1 @@
+ALTER TABLE public.staff ALTER COLUMN salary_amount SET DEFAULT NULL;
