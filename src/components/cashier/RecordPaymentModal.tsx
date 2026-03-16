@@ -76,9 +76,6 @@ export default function RecordPaymentModal({
 
       if (!barbersError) {
         setBarbers(barbersData || []);
-        if (barbersData && barbersData.length > 0) {
-          setSelectedBarber(barbersData[0].id);
-        }
       }
 
       // Fetch services using secure RPC
