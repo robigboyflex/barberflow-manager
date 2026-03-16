@@ -167,11 +167,18 @@ export function useShops() {
         revenueMap[c.shop_id] = (revenueMap[c.shop_id] || 0) + Number(c.price);
       });
 
+      // Calculate expenses per shop
+      const expensesMap: Record<string, number> = {};
+      expensesData?.forEach(e => {
+        expensesMap[e.shop_id] = (expensesMap[e.shop_id] || 0) + Number(e.amount);
+      });
+
       // Combine data
       return shops.map(shop => ({
         ...shop,
         staffCount: staffCountMap[shop.id] || 0,
         todayRevenue: revenueMap[shop.id] || 0,
+        todayExpenses: expensesMap[shop.id] || 0,
         cashierOnDuty: cashierMap[shop.id] || null,
       }));
     },
