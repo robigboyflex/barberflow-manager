@@ -470,11 +470,11 @@ function AddStaffInlineModal({
       toast.error("PIN must contain only numbers");
       return;
     }
-    if (!salaryAmount || isNaN(Number(salaryAmount)) || Number(salaryAmount) < 0) {
+    if (salaryAmount && (isNaN(Number(salaryAmount)) || Number(salaryAmount) < 0)) {
       toast.error("Please enter a valid salary amount");
       return;
     }
-    if (!salaryPayDay || isNaN(Number(salaryPayDay)) || Number(salaryPayDay) < 1 || Number(salaryPayDay) > 31) {
+    if (salaryPayDay && (isNaN(Number(salaryPayDay)) || Number(salaryPayDay) < 1 || Number(salaryPayDay) > 31)) {
       toast.error("Salary pay day must be between 1 and 31");
       return;
     }
@@ -489,9 +489,9 @@ function AddStaffInlineModal({
         role,
         phone: phone.trim() || null,
         pin,
-        salary_type: effectiveSalaryType,
-        salary_amount: Number(salaryAmount),
-        salary_pay_day: Number(salaryPayDay),
+        salary_type: salaryAmount ? effectiveSalaryType : null,
+        salary_amount: salaryAmount ? Number(salaryAmount) : null,
+        salary_pay_day: salaryPayDay ? Number(salaryPayDay) : null,
       });
 
       if (error) throw error;
@@ -596,7 +596,7 @@ function AddStaffInlineModal({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">
-              {salaryType === "percentage" && role === "barber" ? "Percentage (%)" : "Salary Amount (GH₵)"}
+              {salaryType === "percentage" && role === "barber" ? "Percentage (%) (optional)" : "Salary Amount (GH₵) (optional)"}
             </label>
             <input
               type="number"
@@ -609,7 +609,7 @@ function AddStaffInlineModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Salary Pay Day (1-31)</label>
+            <label className="text-sm font-medium">Salary Pay Day (1-31) (optional)</label>
             <input
               type="number"
               value={salaryPayDay}
