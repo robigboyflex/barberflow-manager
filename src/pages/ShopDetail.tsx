@@ -579,9 +579,9 @@ function AddStaffInlineModal({
             />
           </div>
 
-          {role === "barber" && (
+          {role === "barber" && salaryAmount && (
             <div className="space-y-2">
-              <label className="text-sm font-medium">Salary Type</label>
+              <label className="text-sm font-medium">Salary Type (optional)</label>
               <select
                 value={salaryType}
                 onChange={(e) => setSalaryType(e.target.value as "fixed" | "percentage" | "per_cut")}
