@@ -43,8 +43,8 @@ export default function RecordPaymentModal({
   const [customerName, setCustomerName] = useState("");
   const [selectedBarber, setSelectedBarber] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [price, setPrice] = useState("25");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [price, setPrice] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -76,9 +76,6 @@ export default function RecordPaymentModal({
 
       if (!barbersError) {
         setBarbers(barbersData || []);
-        if (barbersData && barbersData.length > 0) {
-          setSelectedBarber(barbersData[0].id);
-        }
       }
 
       // Fetch services using secure RPC
@@ -90,12 +87,6 @@ export default function RecordPaymentModal({
 
       if (!servicesError) {
         setServices(servicesData || []);
-
-        // Set default service price if available
-        if (servicesData && servicesData.length > 0) {
-          setSelectedService(servicesData[0].id);
-          setPrice(servicesData[0].price.toString());
-        }
       }
     } catch (error) {
       logError('RecordPaymentModal.fetchData', error);
@@ -126,6 +117,10 @@ export default function RecordPaymentModal({
     }
     if (!selectedService) {
       toast.error("Please select a service");
+      return;
+    }
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
       return;
     }
     if (!price || parseFloat(price) <= 0) {
@@ -179,10 +174,10 @@ export default function RecordPaymentModal({
 
   const resetForm = () => {
     setCustomerName("");
-    setSelectedBarber(barbers[0]?.id || null);
-    setSelectedService(services[0]?.id || null);
-    setPrice(services[0]?.price.toString() || "25");
-    setPaymentMethod("cash");
+    setSelectedBarber(null);
+    setSelectedService(null);
+    setPrice("");
+    setPaymentMethod(null);
   };
 
   if (!isOpen) return null;
@@ -335,7 +330,7 @@ export default function RecordPaymentModal({
             {/* Submit Button */}
             <Button
               onClick={handleSubmit}
-              disabled={isSubmitting || !selectedBarber || !selectedService}
+              disabled={isSubmitting || !selectedBarber || !selectedService || !paymentMethod || !price || parseFloat(price) <= 0}
               className="w-full h-14 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-lg font-medium"
             >
               {isSubmitting ? "Recording..." : "Record Service"}
