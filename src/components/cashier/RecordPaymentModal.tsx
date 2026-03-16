@@ -119,6 +119,10 @@ export default function RecordPaymentModal({
       toast.error("Please select a service");
       return;
     }
+    if (!paymentMethod) {
+      toast.error("Please select a payment method");
+      return;
+    }
     if (!price || parseFloat(price) <= 0) {
       toast.error("Please enter a valid price");
       return;
