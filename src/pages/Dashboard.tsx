@@ -74,10 +74,10 @@ export default function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <p className="text-primary-foreground/80 text-sm font-medium mb-1">
-                Today's Revenue
+                Today's Net Revenue
               </p>
               <h2 className="text-4xl font-display text-primary-foreground tracking-wide">
-                {formatCurrency(stats.todayRevenue)}
+                {formatCurrency(netRevenue)}
               </h2>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-primary-foreground/20 flex items-center justify-center">
