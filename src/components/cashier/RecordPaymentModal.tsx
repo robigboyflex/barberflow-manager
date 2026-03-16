@@ -170,10 +170,10 @@ export default function RecordPaymentModal({
 
   const resetForm = () => {
     setCustomerName("");
-    setSelectedBarber(barbers[0]?.id || null);
-    setSelectedService(services[0]?.id || null);
-    setPrice(services[0]?.price.toString() || "25");
-    setPaymentMethod("cash");
+    setSelectedBarber(null);
+    setSelectedService(null);
+    setPrice("");
+    setPaymentMethod(null);
   };
 
   if (!isOpen) return null;
