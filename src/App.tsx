@@ -38,6 +38,7 @@ const App = () => (
             <Route index element={<Welcome />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/staff-login" element={<StaffLogin />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/barber" element={<BarberPortal />} />
             <Route path="/cashier" element={<CashierPortal />} />
             <Route path="/cleaner" element={<CleanerPortal />} />

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { z } from "zod";
 import { getUserFriendlyError } from "@/lib/errorHandler";
+import { supabase } from "@/integrations/supabase/client";
 
 const signUpSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
