@@ -484,10 +484,17 @@ export default function ReportDownloadModal({
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
+    a.style.display = 'none';
     document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    
+    // Use setTimeout for mobile Safari compatibility
+    setTimeout(() => {
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }, 100);
   };
 
   if (!isOpen) return null;
