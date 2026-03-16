@@ -116,6 +116,15 @@ export function useShops() {
 
       if (cutsError) throw cutsError;
 
+      // Fetch today's expenses for each shop
+      const { data: expensesData, error: expensesError } = await supabase
+        .from("expenses")
+        .select("shop_id, amount")
+        .in("shop_id", shopIds)
+        .eq("expense_date", todayStart.toISOString().split('T')[0]);
+
+      if (expensesError) throw expensesError;
+
       // Fetch active shifts (open, not closed) to determine cashier on duty
       const { data: activeShifts, error: shiftsError } = await supabase
         .from("shifts")
