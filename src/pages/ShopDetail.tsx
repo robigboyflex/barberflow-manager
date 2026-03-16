@@ -609,7 +609,7 @@ function AddStaffInlineModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Salary Pay Day (1-31)</label>
+            <label className="text-sm font-medium">Salary Pay Day (1-31) (optional)</label>
             <input
               type="number"
               value={salaryPayDay}
