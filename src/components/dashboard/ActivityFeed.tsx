@@ -7,11 +7,11 @@ import {
   Scissors, 
   LogIn, 
   LogOut, 
-  CheckCircle,
   Lock,
   Sparkles,
   RefreshCw,
-  CalendarIcon
+  CalendarIcon,
+  Trash2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,8 +22,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface Activity {
   id: string;
@@ -100,6 +111,8 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const fetchActivities = async (showRefresh = false, filterDate?: Date) => {
     if (showRefresh) setIsRefreshing(true);
@@ -113,7 +126,6 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
 
       if (error) throw error;
       
-      // Filter by date if selected
       let filteredData = data || [];
       if (filterDate) {
         const filterDateStr = format(filterDate, 'yyyy-MM-dd');
@@ -135,7 +147,6 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
   useEffect(() => {
     fetchActivities(false, selectedDate);
 
-    // Set up realtime subscription for new activities
     const channel = supabase
       .channel("activities-realtime")
       .on(
@@ -164,6 +175,32 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
     setSelectedDate(undefined);
   };
 
+  const handleClearActivities = async () => {
+    if (!selectedDate) return;
+    setIsClearing(true);
+    try {
+      const { data, error } = await supabase.rpc("clear_activities_by_date", {
+        p_owner_id: ownerId,
+        p_date: format(selectedDate, "yyyy-MM-dd"),
+      });
+      if (error) throw error;
+      toast.success(`Cleared ${data} activity records for ${format(selectedDate, "MMM d, yyyy")}`);
+      fetchActivities(false, selectedDate);
+    } catch (error: any) {
+      const msg = error?.message || "";
+      if (msg.includes("Cannot clear today")) {
+        toast.error("Cannot clear today's activities");
+      } else {
+        toast.error("Failed to clear activities");
+      }
+    } finally {
+      setIsClearing(false);
+      setShowClearConfirm(false);
+    }
+  };
+
+  const isPastDate = selectedDate && format(selectedDate, "yyyy-MM-dd") !== format(new Date(), "yyyy-MM-dd");
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -179,6 +216,17 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg text-foreground">Live Activity</h3>
         <div className="flex items-center gap-2">
+          {isPastDate && activities.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowClearConfirm(true)}
+              className="h-8 gap-1.5 text-xs text-destructive hover:text-destructive"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear
+            </Button>
+          )}
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -233,7 +281,7 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
           <Clock className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50" />
           <p className="text-muted-foreground text-sm">No activity yet</p>
           <p className="text-xs text-muted-foreground/70">
-            Activities will appear here as staff work
+            {selectedDate ? "No activities for this date" : "Activities will appear here as staff work"}
           </p>
         </div>
       ) : (
@@ -284,6 +332,30 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
           ))}
         </div>
       )}
+
+      {/* Clear Activities Confirmation */}
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear Activity Records?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all activity records for{" "}
+              <strong>{selectedDate ? format(selectedDate, "MMMM d, yyyy") : ""}</strong>.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClearActivities}
+              disabled={isClearing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isClearing ? "Clearing..." : "Clear Records"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
