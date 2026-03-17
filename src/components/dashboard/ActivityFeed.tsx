@@ -11,7 +11,8 @@ import {
   Sparkles,
   RefreshCw,
   CalendarIcon,
-  Trash2
+  Trash2,
+  TrendingDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
