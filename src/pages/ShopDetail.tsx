@@ -529,9 +529,9 @@ function AddStaffInlineModal({
         initial={{ opacity: 0, y: 100 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 100 }}
-        className="fixed inset-x-4 bottom-4 bg-card rounded-3xl border border-border shadow-2xl max-h-[70vh] overflow-y-auto"
+        className="fixed inset-x-4 bottom-4 bg-card rounded-3xl border border-border shadow-2xl max-h-[80vh] flex flex-col"
       >
-        <div className="p-4 border-b border-border flex items-center justify-between">
+        <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
           <div>
             <h2 className="font-display text-xl">Add Staff</h2>
             <p className="text-sm text-muted-foreground">{shopName}</p>
@@ -541,7 +541,7 @@ function AddStaffInlineModal({
           </Button>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           <div className="space-y-2">
             <label className="text-sm font-medium">Name</label>
             <input
@@ -663,7 +663,7 @@ function AddStaffInlineModal({
           )}
         </div>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border shrink-0">
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
