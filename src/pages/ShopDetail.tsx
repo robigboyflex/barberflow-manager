@@ -33,6 +33,8 @@ import AnimatedPage from "@/components/AnimatedPage";
 import AddShopModal from "@/components/AddShopModal";
 import EditServiceModal from "@/components/EditServiceModal";
 import QRCodeGenerator from "@/components/QRCodeGenerator";
+import OwnerChatSheet from "@/components/messaging/OwnerChatSheet";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currency";
 
 interface Shop {
