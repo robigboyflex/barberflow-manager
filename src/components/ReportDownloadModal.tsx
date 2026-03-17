@@ -19,7 +19,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, formatCurrencyPDF } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 interface Shop {
@@ -349,9 +349,9 @@ export default function ReportDownloadModal({
     doc.setFontSize(9);
     const cardW = contentWidth / 4 - 3;
     const summaryItems = [
-      { label: "Revenue", value: formatCurrency(totalRevenue), color: [34, 197, 94] },
-      { label: "Expenses", value: formatCurrency(totalExpenses), color: [239, 68, 68] },
-      { label: "Net Profit", value: formatCurrency(netProfit), color: netProfit >= 0 ? [34, 197, 94] : [239, 68, 68] },
+      { label: "Revenue", value: formatCurrencyPDF(totalRevenue), color: [34, 197, 94] },
+      { label: "Expenses", value: formatCurrencyPDF(totalExpenses), color: [239, 68, 68] },
+      { label: "Net Profit", value: formatCurrencyPDF(netProfit), color: netProfit >= 0 ? [34, 197, 94] : [239, 68, 68] },
       { label: "Total Cuts", value: String(totalCuts), color: [212, 160, 72] },
     ];
 
@@ -402,7 +402,7 @@ export default function ReportDownloadModal({
         doc.text(i < 3 ? medals[i] : String(i + 1), margin + 5, y + 4);
         doc.text(b.name, margin + 22, y + 4);
         doc.text(String(b.cuts), margin + 103, y + 4);
-        doc.text(formatCurrency(b.revenue), margin + 130, y + 4);
+        doc.text(formatCurrencyPDF(b.revenue), margin + 130, y + 4);
         doc.setDrawColor(240, 240, 240);
         doc.line(margin, y + 6, margin + contentWidth, y + 6);
         y += 8;
@@ -416,7 +416,7 @@ export default function ReportDownloadModal({
       doc.setTextColor(30, 30, 30);
       doc.text("Total", margin + 22, y + 5.5);
       doc.text(String(barberBreakdown.reduce((s, b) => s + b.cuts, 0)), margin + 103, y + 5.5);
-      doc.text(formatCurrency(barberBreakdown.reduce((s, b) => s + b.revenue, 0)), margin + 130, y + 5.5);
+      doc.text(formatCurrencyPDF(barberBreakdown.reduce((s, b) => s + b.revenue, 0)), margin + 130, y + 5.5);
       y += 14;
     }
 
@@ -452,7 +452,7 @@ export default function ReportDownloadModal({
       doc.text(((cut.shops as any)?.name || "N/A").substring(0, 15), margin + 38, y + 4);
       doc.text(((cut.staff as any)?.name || "N/A").substring(0, 15), margin + 70, y + 4);
       doc.text(((cut.services as any)?.name || "N/A").substring(0, 15), margin + 100, y + 4);
-      doc.text(formatCurrency(Number(cut.price)), margin + 135, y + 4);
+      doc.text(formatCurrencyPDF(Number(cut.price)), margin + 135, y + 4);
       doc.text(cut.status, margin + 160, y + 4);
       doc.setDrawColor(245, 245, 245);
       doc.line(margin, y + 6, margin + contentWidth, y + 6);
@@ -466,7 +466,7 @@ export default function ReportDownloadModal({
     doc.setFontSize(8);
     doc.setTextColor(30, 30, 30);
     doc.text(`Total (${totalCuts} confirmed cuts)`, margin + 2, y + 5.5);
-    doc.text(formatCurrency(totalRevenue), margin + 135, y + 5.5);
+    doc.text(formatCurrencyPDF(totalRevenue), margin + 135, y + 5.5);
     y += 14;
 
     // Expenses Detail
@@ -500,7 +500,7 @@ export default function ReportDownloadModal({
       doc.text(((e.shops as any)?.name || "N/A").substring(0, 15), margin + 30, y + 4);
       doc.text(e.category.substring(0, 12), margin + 65, y + 4);
       doc.text(e.description.substring(0, 25), margin + 100, y + 4);
-      doc.text(formatCurrency(Number(e.amount)), margin + 155, y + 4);
+      doc.text(formatCurrencyPDF(Number(e.amount)), margin + 155, y + 4);
       doc.setDrawColor(245, 245, 245);
       doc.line(margin, y + 6, margin + contentWidth, y + 6);
       y += 7;
@@ -513,7 +513,7 @@ export default function ReportDownloadModal({
     doc.setFontSize(8);
     doc.setTextColor(30, 30, 30);
     doc.text("Total Expenses", margin + 2, y + 5.5);
-    doc.text(formatCurrency(totalExpenses), margin + 155, y + 5.5);
+    doc.text(formatCurrencyPDF(totalExpenses), margin + 155, y + 5.5);
     y += 14;
 
     // Footer
