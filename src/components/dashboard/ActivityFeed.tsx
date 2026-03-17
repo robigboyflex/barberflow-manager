@@ -326,12 +326,23 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
                       {activity.shop_name}
                     </span>
                   </div>
-                  {typeof activity.metadata === 'object' && activity.metadata !== null && 'price' in activity.metadata && (
-                    <div className="mt-1">
-                      <span className="text-xs font-medium text-success">
-                        {formatCurrency(Number((activity.metadata as Record<string, unknown>).price))}
-                      </span>
-                    </div>
+                  {typeof activity.metadata === 'object' && activity.metadata !== null && (
+                    <>
+                      {'price' in activity.metadata && (
+                        <div className="mt-1">
+                          <span className="text-xs font-medium text-success">
+                            {formatCurrency(Number((activity.metadata as Record<string, unknown>).price))}
+                          </span>
+                        </div>
+                      )}
+                      {'amount' in activity.metadata && activity.activity_type === 'expense_recorded' && (
+                        <div className="mt-1">
+                          <span className="text-xs font-medium text-destructive">
+                            -{formatCurrency(Number((activity.metadata as Record<string, unknown>).amount))}
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
