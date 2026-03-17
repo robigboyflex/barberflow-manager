@@ -349,9 +349,9 @@ export default function ReportDownloadModal({
     doc.setFontSize(9);
     const cardW = contentWidth / 4 - 3;
     const summaryItems = [
-      { label: "Revenue", value: formatCurrency(totalRevenue), color: [34, 197, 94] },
-      { label: "Expenses", value: formatCurrency(totalExpenses), color: [239, 68, 68] },
-      { label: "Net Profit", value: formatCurrency(netProfit), color: netProfit >= 0 ? [34, 197, 94] : [239, 68, 68] },
+      { label: "Revenue", value: formatCurrencyPDF(totalRevenue), color: [34, 197, 94] },
+      { label: "Expenses", value: formatCurrencyPDF(totalExpenses), color: [239, 68, 68] },
+      { label: "Net Profit", value: formatCurrencyPDF(netProfit), color: netProfit >= 0 ? [34, 197, 94] : [239, 68, 68] },
       { label: "Total Cuts", value: String(totalCuts), color: [212, 160, 72] },
     ];
 
