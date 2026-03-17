@@ -67,7 +67,10 @@ const getActivityIcon = (type: string) => {
       return <Scissors className="w-4 h-4 text-primary" />;
     case "payment_recorded":
     case "payment_confirmed":
+    case "appointment_payment":
       return <DollarSign className="w-4 h-4 text-success" />;
+    case "expense_recorded":
+      return <TrendingDown className="w-4 h-4 text-destructive" />;
     case "day_closed":
       return <Lock className="w-4 h-4 text-destructive" />;
     default:
