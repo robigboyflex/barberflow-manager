@@ -32,7 +32,7 @@ export default function CashierChatSheet() {
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSending, setIsSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollEndRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async () => {
     if (!staff) return;
@@ -86,7 +86,7 @@ export default function CashierChatSheet() {
     markAsRead();
     setUnreadCount(0);
     setTimeout(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      scrollEndRef.current?.scrollIntoView({ behavior: "instant" });
     }, 100);
 
     const pollInterval = setInterval(() => fetchMessages(), 5000);
@@ -95,8 +95,10 @@ export default function CashierChatSheet() {
 
   // Auto-scroll when messages change
   useEffect(() => {
-    if (isOpen && scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight });
+    if (isOpen) {
+      setTimeout(() => {
+        scrollEndRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 50);
     }
   }, [messages.length, isOpen]);
 
@@ -145,7 +147,7 @@ export default function CashierChatSheet() {
           <SheetTitle className="font-display text-lg">Chat with Owner</SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-12">
@@ -168,6 +170,7 @@ export default function CashierChatSheet() {
                 />
               ))
             )}
+            <div ref={scrollEndRef} />
           </div>
         </ScrollArea>
 

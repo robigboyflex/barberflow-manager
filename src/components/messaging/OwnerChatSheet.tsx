@@ -37,7 +37,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSending, setIsSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollEndRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async () => {
     const { data, error } = await supabase
@@ -93,7 +93,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
       markAsRead();
       setUnreadCount(0);
       setTimeout(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+        scrollEndRef.current?.scrollIntoView({ behavior: "instant" });
       }, 100);
     }
   }, [isOpen, messages.length]);
@@ -138,7 +138,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
           <SheetTitle className="font-display text-lg">Chat — {shopName}</SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-12">
@@ -161,6 +161,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
                 />
               ))
             )}
+            <div ref={scrollEndRef} />
           </div>
         </ScrollArea>
 
