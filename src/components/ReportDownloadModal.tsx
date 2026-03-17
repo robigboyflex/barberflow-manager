@@ -42,6 +42,12 @@ interface DateRange {
   to: Date | undefined;
 }
 
+interface BarberBreakdownItem {
+  name: string;
+  cuts: number;
+  revenue: number;
+}
+
 export default function ReportDownloadModal({
   isOpen,
   onClose,
@@ -88,6 +94,19 @@ export default function ReportDownloadModal({
     return { start, end: now };
   };
 
+  const getBarberBreakdown = (cuts: any[]): BarberBreakdownItem[] => {
+    const map = new Map<string, BarberBreakdownItem>();
+    cuts.forEach(cut => {
+      if (cut.status !== "confirmed") return;
+      const barber = cut.staff as any;
+      const name = barber?.name || "Unknown";
+      const existing = map.get(name);
+      if (existing) { existing.cuts++; existing.revenue += Number(cut.price); }
+      else { map.set(name, { name, cuts: 1, revenue: Number(cut.price) }); }
+    });
+    return Array.from(map.values()).sort((a, b) => b.cuts - a.cuts);
+  };
+
   const generateReport = async () => {
     if (timePeriod === "custom" && (!dateRange.from || !dateRange.to)) {
       toast.error("Please select both start and end dates");
@@ -109,11 +128,7 @@ export default function ReportDownloadModal({
       const { data: cutsData, error: cutsError } = await supabase
         .from("cuts")
         .select(`
-          id,
-          price,
-          status,
-          created_at,
-          shop_id,
+          id, price, status, created_at, shop_id,
           shops!cuts_shop_id_fkey (name),
           staff!cuts_barber_id_fkey (name),
           services!cuts_service_id_fkey (name)
@@ -130,12 +145,7 @@ export default function ReportDownloadModal({
       const { data: expensesData, error: expensesError } = await supabase
         .from("expenses")
         .select(`
-          id,
-          amount,
-          description,
-          category,
-          expense_date,
-          shop_id,
+          id, amount, description, category, expense_date, shop_id,
           shops!expenses_shop_id_fkey (name)
         `)
         .in("shop_id", shopIds)
@@ -144,21 +154,19 @@ export default function ReportDownloadModal({
 
       if (expensesError) throw expensesError;
 
-      // Calculate summary
-      const totalRevenue = cutsData
-        ?.filter((c) => c.status === "confirmed")
-        .reduce((sum, c) => sum + Number(c.price), 0) || 0;
+      const totalRevenue = cutsData?.filter((c) => c.status === "confirmed").reduce((sum, c) => sum + Number(c.price), 0) || 0;
       const totalExpenses = expensesData?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
       const netProfit = totalRevenue - totalExpenses;
       const totalCuts = cutsData?.filter((c) => c.status === "confirmed").length || 0;
+      const periodLabel = `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
+      const barberBreakdown = getBarberBreakdown(cutsData || []);
 
-      // Generate file based on format
       if (fileFormat === "csv") {
-        generateCSV(cutsData || [], expensesData || [], totalRevenue, totalExpenses, netProfit, totalCuts, start, end);
+        generateCSV(cutsData || [], expensesData || [], totalRevenue, totalExpenses, netProfit, totalCuts, periodLabel, barberBreakdown);
       } else if (fileFormat === "excel") {
-        generateExcel(cutsData || [], expensesData || [], totalRevenue, totalExpenses, netProfit, totalCuts, start, end);
+        generateExcel(cutsData || [], expensesData || [], totalRevenue, totalExpenses, netProfit, totalCuts, periodLabel, barberBreakdown);
       } else {
-        generatePDF(cutsData || [], expensesData || [], totalRevenue, totalExpenses, netProfit, totalCuts, start, end);
+        await generatePDF(cutsData || [], expensesData || [], totalRevenue, totalExpenses, netProfit, totalCuts, periodLabel, barberBreakdown);
       }
 
       toast.success("Report downloaded successfully!");
@@ -171,330 +179,353 @@ export default function ReportDownloadModal({
     }
   };
 
-  const getBarberBreakdown = (cuts: any[]) => {
-    const map = new Map<string, { name: string; cuts: number; revenue: number }>();
-    cuts.forEach(cut => {
-      if (cut.status !== "confirmed") return;
-      const barber = cut.staff as any;
-      const name = barber?.name || "Unknown";
-      const existing = map.get(name);
-      if (existing) { existing.cuts++; existing.revenue += Number(cut.price); }
-      else { map.set(name, { name, cuts: 1, revenue: Number(cut.price) }); }
-    });
-    return Array.from(map.values()).sort((a, b) => b.cuts - a.cuts);
-  };
-
-  const generateCSV = (
-    cuts: any[],
-    expenses: any[],
-    totalRevenue: number,
-    totalExpenses: number,
-    netProfit: number,
-    totalCuts: number,
-    start: Date,
-    end: Date
-  ) => {
-    const periodLabel = `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
-    const barberBreakdown = getBarberBreakdown(cuts);
-    
-    let csv = "BarberFlow Revenue Report\n";
-    csv += `Period: ${periodLabel}\n\n`;
-    
-    csv += "SUMMARY\n";
-    csv += `Total Revenue,${formatCurrency(totalRevenue)}\n`;
-    csv += `Total Expenses,${formatCurrency(totalExpenses)}\n`;
-    csv += `Net Profit,${formatCurrency(netProfit)}\n`;
-    csv += `Total Cuts,${totalCuts}\n\n`;
-
-    csv += "BARBER PERFORMANCE\n";
-    csv += "Rank,Barber,Cuts,Revenue\n";
-    barberBreakdown.forEach((b, i) => {
-      csv += `${i + 1},${b.name},${b.cuts},${formatCurrency(b.revenue)}\n`;
-    });
-    csv += `,,Total: ${barberBreakdown.reduce((s, b) => s + b.cuts, 0)},${formatCurrency(barberBreakdown.reduce((s, b) => s + b.revenue, 0))}\n\n`;
-    
-    csv += "CUTS DETAIL\n";
-    csv += "Date,Shop,Barber,Service,Amount,Status\n";
-    cuts.forEach((cut) => {
-      const shop = cut.shops as any;
-      const barber = cut.staff as any;
-      const service = cut.services as any;
-      csv += `${new Date(cut.created_at).toLocaleString()},${shop?.name || "N/A"},${barber?.name || "N/A"},${service?.name || "N/A"},${formatCurrency(Number(cut.price))},${cut.status}\n`;
-    });
-    csv += `,,,Total (${totalCuts} cuts),${formatCurrency(totalRevenue)},\n`;
-    
-    csv += "\nEXPENSES DETAIL\n";
-    csv += "Date,Shop,Category,Description,Amount\n";
-    expenses.forEach((expense) => {
-      const shop = expense.shops as any;
-      csv += `${expense.expense_date},${shop?.name || "N/A"},${expense.category},${expense.description},${formatCurrency(Number(expense.amount))}\n`;
-    });
-    csv += `,,,Total,${formatCurrency(totalExpenses)}\n`;
-
-    downloadFile(csv, `barberflow-report-${timePeriod}.csv`, "text/csv");
-  };
-
-  const generateExcel = (
-    cuts: any[],
-    expenses: any[],
-    totalRevenue: number,
-    totalExpenses: number,
-    netProfit: number,
-    totalCuts: number,
-    start: Date,
-    end: Date
-  ) => {
-    const periodLabel = `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
-    const barberBreakdown = getBarberBreakdown(cuts);
-    
-    let csv = "\uFEFF";
-    csv += "BarberFlow Revenue Report\n";
-    csv += `Period: ${periodLabel}\n\n`;
-    
-    csv += "SUMMARY\n";
-    csv += `Total Revenue\t${formatCurrency(totalRevenue)}\n`;
-    csv += `Total Expenses\t${formatCurrency(totalExpenses)}\n`;
-    csv += `Net Profit\t${formatCurrency(netProfit)}\n`;
-    csv += `Total Cuts\t${totalCuts}\n\n`;
-
-    csv += "BARBER PERFORMANCE\n";
-    csv += "Rank\tBarber\tCuts\tRevenue\n";
-    barberBreakdown.forEach((b, i) => {
-      csv += `${i + 1}\t${b.name}\t${b.cuts}\t${Number(b.revenue).toFixed(2)}\n`;
-    });
-    csv += `\tTotal\t${barberBreakdown.reduce((s, b) => s + b.cuts, 0)}\t${barberBreakdown.reduce((s, b) => s + b.revenue, 0).toFixed(2)}\n\n`;
-    
-    csv += "CUTS DETAIL\n";
-    csv += "Date\tShop\tBarber\tService\tAmount\tStatus\n";
-    cuts.forEach((cut) => {
-      const shop = cut.shops as any;
-      const barber = cut.staff as any;
-      const service = cut.services as any;
-      csv += `${new Date(cut.created_at).toLocaleString()}\t${shop?.name || "N/A"}\t${barber?.name || "N/A"}\t${service?.name || "N/A"}\t${Number(cut.price).toFixed(2)}\t${cut.status}\n`;
-    });
-    csv += `\t\t\tTotal (${totalCuts} cuts)\t${totalRevenue.toFixed(2)}\t\n`;
-    
-    csv += "\nEXPENSES DETAIL\n";
-    csv += "Date\tShop\tCategory\tDescription\tAmount\n";
-    expenses.forEach((expense) => {
-      const shop = expense.shops as any;
-      csv += `${expense.expense_date}\t${shop?.name || "N/A"}\t${expense.category}\t${expense.description}\t${Number(expense.amount).toFixed(2)}\n`;
-    });
-    csv += `\t\t\tTotal\t${totalExpenses.toFixed(2)}\n`;
-
-    downloadFile(csv, `barberflow-report-${timePeriod}.xls`, "application/vnd.ms-excel");
-  };
-
-  const generatePDF = (
-    cuts: any[],
-    expenses: any[],
-    totalRevenue: number,
-    totalExpenses: number,
-    netProfit: number,
-    totalCuts: number,
-    start: Date,
-    end: Date
-  ) => {
-    const periodLabel = `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`;
-
-    // Calculate barber breakdown for the report
-    const barberMap = new Map<string, { name: string; cuts: number; revenue: number }>();
-    cuts.forEach(cut => {
-      if (cut.status !== "confirmed") return;
-      const barber = cut.staff as any;
-      const name = barber?.name || "Unknown";
-      const existing = barberMap.get(name);
-      if (existing) {
-        existing.cuts++;
-        existing.revenue += Number(cut.price);
-      } else {
-        barberMap.set(name, { name, cuts: 1, revenue: Number(cut.price) });
-      }
-    });
-    const barberBreakdown = Array.from(barberMap.values()).sort((a, b) => b.cuts - a.cuts);
-    
-    const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>BarberFlow Report</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #f8f9fa; color: #1a1a2e; }
-    .header { background: linear-gradient(135deg, #d4a048, #c4922a); color: #fff; padding: 40px; }
-    .header h1 { font-size: 28px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
-    .header p { opacity: 0.85; font-size: 14px; }
-    .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-    .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: -30px 20px 30px; position: relative; z-index: 1; }
-    .summary-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); text-align: center; }
-    .summary-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px; }
-    .summary-card .value { font-size: 22px; font-weight: 800; }
-    .summary-card .value.revenue { color: #22c55e; }
-    .summary-card .value.expense { color: #ef4444; }
-    .summary-card .value.profit { color: ${netProfit >= 0 ? '#22c55e' : '#ef4444'}; }
-    .summary-card .value.cuts { color: #d4a048; }
-    .section { background: #fff; border-radius: 12px; margin: 20px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-    .section h2 { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .section h2::before { content: ''; width: 4px; height: 20px; background: #d4a048; border-radius: 2px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f5f5f5; padding: 10px 12px; text-align: left; font-weight: 600; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
-    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
-    tr:last-child td { border-bottom: none; }
-    .total-row { background: #fef9ee; font-weight: 700; }
-    .total-row td { border-top: 2px solid #d4a048; color: #1a1a2e; }
-    .barber-rank { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .rank-1 { background: linear-gradient(135deg, #fbbf24, #d97706); color: #fff; }
-    .rank-2 { background: linear-gradient(135deg, #d1d5db, #9ca3af); color: #fff; }
-    .rank-3 { background: linear-gradient(135deg, #f97316, #c2410c); color: #fff; }
-    .rank-other { background: #f3f4f6; color: #6b7280; }
-    .footer { text-align: center; padding: 20px; font-size: 11px; color: #999; }
-    @media print { body { background: #fff; } .section { box-shadow: none; border: 1px solid #eee; } .summary-grid { margin-top: -20px; } .summary-card { box-shadow: none; border: 1px solid #eee; } }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="container">
-      <h1>📊 BarberFlow Report</h1>
-      <p>Period: ${periodLabel}</p>
-    </div>
-  </div>
-
-  <div class="summary-grid">
-    <div class="summary-card">
-      <div class="label">Total Revenue</div>
-      <div class="value revenue">${formatCurrency(totalRevenue)}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Total Expenses</div>
-      <div class="value expense">${formatCurrency(totalExpenses)}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Net Profit</div>
-      <div class="value profit">${formatCurrency(netProfit)}</div>
-    </div>
-    <div class="summary-card">
-      <div class="label">Total Cuts</div>
-      <div class="value cuts">${totalCuts}</div>
-    </div>
-  </div>
-
-  ${barberBreakdown.length > 0 ? `
-  <div class="section">
-    <h2>Barber Performance</h2>
-    <table>
-      <tr><th>Rank</th><th>Barber</th><th>Cuts</th><th>Revenue</th></tr>
-      ${barberBreakdown.map((b, i) => `
-        <tr>
-          <td><span class="barber-rank ${i < 3 ? `rank-${i + 1}` : 'rank-other'}">${i + 1}</span></td>
-          <td>${b.name}</td>
-          <td>${b.cuts}</td>
-          <td>${formatCurrency(b.revenue)}</td>
-        </tr>
-      `).join('')}
-      <tr class="total-row">
-        <td colspan="2"><strong>Total</strong></td>
-        <td><strong>${barberBreakdown.reduce((s, b) => s + b.cuts, 0)}</strong></td>
-        <td><strong>${formatCurrency(barberBreakdown.reduce((s, b) => s + b.revenue, 0))}</strong></td>
-      </tr>
-    </table>
-  </div>
-  ` : ''}
-
-  <div class="section">
-    <h2>Cuts Detail</h2>
-    <table>
-      <tr><th>Date</th><th>Shop</th><th>Barber</th><th>Service</th><th>Amount</th><th>Status</th></tr>
-      ${cuts.map((cut) => {
-        const shop = cut.shops as any;
-        const barber = cut.staff as any;
-        const service = cut.services as any;
-        return `<tr>
-          <td>${new Date(cut.created_at).toLocaleString()}</td>
-          <td>${shop?.name || "N/A"}</td>
-          <td>${barber?.name || "N/A"}</td>
-          <td>${service?.name || "N/A"}</td>
-          <td>${formatCurrency(Number(cut.price))}</td>
-          <td>${cut.status}</td>
-        </tr>`;
-      }).join('')}
-      <tr class="total-row">
-        <td colspan="4"><strong>Total (${totalCuts} confirmed cuts)</strong></td>
-        <td><strong>${formatCurrency(totalRevenue)}</strong></td>
-        <td></td>
-      </tr>
-    </table>
-  </div>
-
-  <div class="section">
-    <h2>Expenses Detail</h2>
-    <table>
-      <tr><th>Date</th><th>Shop</th><th>Category</th><th>Description</th><th>Amount</th></tr>
-      ${expenses.map((expense) => {
-        const shop = expense.shops as any;
-        return `<tr>
-          <td>${expense.expense_date}</td>
-          <td>${shop?.name || "N/A"}</td>
-          <td>${expense.category}</td>
-          <td>${expense.description}</td>
-          <td>${formatCurrency(Number(expense.amount))}</td>
-        </tr>`;
-      }).join('')}
-      <tr class="total-row">
-        <td colspan="4"><strong>Total Expenses</strong></td>
-        <td><strong>${formatCurrency(totalExpenses)}</strong></td>
-      </tr>
-    </table>
-  </div>
-
-  <div class="footer">
-    Generated by BarberFlow • ${new Date().toLocaleString()}
-  </div>
-</body>
-</html>`;
-
-    // Create a downloadable HTML file for mobile compatibility
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    // Try opening in a new tab first (works on most browsers)
-    const newWindow = window.open(url, '_blank');
-    
-    if (!newWindow) {
-      // Fallback: download as HTML file if popup blocked (common on mobile)
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `barberflow-report-${timePeriod}.html`;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      // Delay cleanup to ensure download starts
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
-    } else {
-      // Cleanup after a delay
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    }
-  };
-
-  const downloadFile = (content: string, filename: string, mimeType: string) => {
-    const blob = new Blob([content], { type: mimeType });
+  const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
-    a.style.display = 'none';
+    a.style.display = "none";
     document.body.appendChild(a);
-    
-    // Use setTimeout for mobile Safari compatibility
+    // Delayed click for mobile Safari compatibility
     setTimeout(() => {
       a.click();
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-      }, 1000);
+      }, 2000);
     }, 100);
+  };
+
+  const generateCSV = (
+    cuts: any[], expenses: any[],
+    totalRevenue: number, totalExpenses: number, netProfit: number, totalCuts: number,
+    periodLabel: string, barberBreakdown: BarberBreakdownItem[]
+  ) => {
+    const escapeCSV = (val: string) => {
+      if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    let csv = "BarberFlow Revenue Report\n";
+    csv += `Period:,${escapeCSV(periodLabel)}\n\n`;
+    csv += "SUMMARY\n";
+    csv += `Total Revenue,${totalRevenue.toFixed(2)}\n`;
+    csv += `Total Expenses,${totalExpenses.toFixed(2)}\n`;
+    csv += `Net Profit,${netProfit.toFixed(2)}\n`;
+    csv += `Total Cuts,${totalCuts}\n\n`;
+
+    csv += "BARBER PERFORMANCE\n";
+    csv += "Rank,Barber,Cuts,Revenue\n";
+    barberBreakdown.forEach((b, i) => {
+      csv += `${i + 1},${escapeCSV(b.name)},${b.cuts},${b.revenue.toFixed(2)}\n`;
+    });
+    csv += `,,${barberBreakdown.reduce((s, b) => s + b.cuts, 0)},${barberBreakdown.reduce((s, b) => s + b.revenue, 0).toFixed(2)}\n\n`;
+
+    csv += "CUTS DETAIL\n";
+    csv += "Date,Shop,Barber,Service,Amount,Status\n";
+    cuts.forEach((cut) => {
+      csv += `${escapeCSV(new Date(cut.created_at).toLocaleString())},${escapeCSV((cut.shops as any)?.name || "N/A")},${escapeCSV((cut.staff as any)?.name || "N/A")},${escapeCSV((cut.services as any)?.name || "N/A")},${Number(cut.price).toFixed(2)},${cut.status}\n`;
+    });
+    csv += `,,,,${totalRevenue.toFixed(2)},Total (${totalCuts} cuts)\n\n`;
+
+    csv += "EXPENSES DETAIL\n";
+    csv += "Date,Shop,Category,Description,Amount\n";
+    expenses.forEach((e) => {
+      csv += `${e.expense_date},${escapeCSV((e.shops as any)?.name || "N/A")},${escapeCSV(e.category)},${escapeCSV(e.description)},${Number(e.amount).toFixed(2)}\n`;
+    });
+    csv += `,,,,${totalExpenses.toFixed(2)}\n`;
+
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    triggerDownload(blob, `barberflow-report-${timePeriod}.csv`);
+  };
+
+  const generateExcel = (
+    cuts: any[], expenses: any[],
+    totalRevenue: number, totalExpenses: number, netProfit: number, totalCuts: number,
+    periodLabel: string, barberBreakdown: BarberBreakdownItem[]
+  ) => {
+    import("xlsx").then((XLSX) => {
+      const wb = XLSX.utils.book_new();
+
+      // Summary sheet
+      const summaryData = [
+        ["BarberFlow Revenue Report"],
+        ["Period", periodLabel],
+        [],
+        ["Metric", "Value"],
+        ["Total Revenue", totalRevenue],
+        ["Total Expenses", totalExpenses],
+        ["Net Profit", netProfit],
+        ["Total Cuts", totalCuts],
+      ];
+      const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
+      summaryWS["!cols"] = [{ wch: 20 }, { wch: 25 }];
+      XLSX.utils.book_append_sheet(wb, summaryWS, "Summary");
+
+      // Barber Performance sheet
+      const barberData = [
+        ["Rank", "Barber", "Cuts", "Revenue"],
+        ...barberBreakdown.map((b, i) => [i + 1, b.name, b.cuts, b.revenue]),
+        ["", "Total", barberBreakdown.reduce((s, b) => s + b.cuts, 0), barberBreakdown.reduce((s, b) => s + b.revenue, 0)],
+      ];
+      const barberWS = XLSX.utils.aoa_to_sheet(barberData);
+      barberWS["!cols"] = [{ wch: 6 }, { wch: 20 }, { wch: 8 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, barberWS, "Barber Performance");
+
+      // Cuts Detail sheet
+      const cutsRows = cuts.map((cut) => [
+        new Date(cut.created_at).toLocaleString(),
+        (cut.shops as any)?.name || "N/A",
+        (cut.staff as any)?.name || "N/A",
+        (cut.services as any)?.name || "N/A",
+        Number(cut.price),
+        cut.status,
+      ]);
+      cutsRows.push(["", "", "", `Total (${totalCuts} cuts)`, totalRevenue, ""]);
+      const cutsWS = XLSX.utils.aoa_to_sheet([
+        ["Date", "Shop", "Barber", "Service", "Amount", "Status"],
+        ...cutsRows,
+      ]);
+      cutsWS["!cols"] = [{ wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 18 }, { wch: 12 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, cutsWS, "Cuts Detail");
+
+      // Expenses Detail sheet
+      const expenseRows = expenses.map((e) => [
+        e.expense_date,
+        (e.shops as any)?.name || "N/A",
+        e.category,
+        e.description,
+        Number(e.amount),
+      ]);
+      expenseRows.push(["", "", "", "Total", totalExpenses]);
+      const expensesWS = XLSX.utils.aoa_to_sheet([
+        ["Date", "Shop", "Category", "Description", "Amount"],
+        ...expenseRows,
+      ]);
+      expensesWS["!cols"] = [{ wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 25 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, expensesWS, "Expenses Detail");
+
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      triggerDownload(blob, `barberflow-report-${timePeriod}.xlsx`);
+    });
+  };
+
+  const generatePDF = async (
+    cuts: any[], expenses: any[],
+    totalRevenue: number, totalExpenses: number, netProfit: number, totalCuts: number,
+    periodLabel: string, barberBreakdown: BarberBreakdownItem[]
+  ) => {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = 210;
+    const margin = 15;
+    const contentWidth = pageWidth - margin * 2;
+    let y = 0;
+
+    const checkPage = (needed: number) => {
+      if (y + needed > 280) {
+        doc.addPage();
+        y = 15;
+      }
+    };
+
+    // Header band
+    doc.setFillColor(212, 160, 72);
+    doc.rect(0, 0, pageWidth, 35, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("BarberFlow Report", margin, 18);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Period: ${periodLabel}`, margin, 28);
+    y = 45;
+
+    // Summary cards
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(9);
+    const cardW = contentWidth / 4 - 3;
+    const summaryItems = [
+      { label: "Revenue", value: formatCurrency(totalRevenue), color: [34, 197, 94] },
+      { label: "Expenses", value: formatCurrency(totalExpenses), color: [239, 68, 68] },
+      { label: "Net Profit", value: formatCurrency(netProfit), color: netProfit >= 0 ? [34, 197, 94] : [239, 68, 68] },
+      { label: "Total Cuts", value: String(totalCuts), color: [212, 160, 72] },
+    ];
+
+    summaryItems.forEach((item, i) => {
+      const x = margin + i * (cardW + 4);
+      doc.setFillColor(248, 249, 250);
+      doc.roundedRect(x, y, cardW, 22, 2, 2, "F");
+      doc.setTextColor(130, 130, 130);
+      doc.setFontSize(7);
+      doc.text(item.label.toUpperCase(), x + cardW / 2, y + 8, { align: "center" });
+      doc.setTextColor(item.color[0], item.color[1], item.color[2]);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(item.value, x + cardW / 2, y + 17, { align: "center" });
+      doc.setFont("helvetica", "normal");
+    });
+    y += 32;
+
+    // Barber Performance
+    if (barberBreakdown.length > 0) {
+      checkPage(20 + barberBreakdown.length * 8);
+      doc.setFillColor(212, 160, 72);
+      doc.rect(margin, y, 3, 7, "F");
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Barber Performance", margin + 6, y + 6);
+      y += 12;
+
+      // Table header
+      doc.setFillColor(245, 245, 245);
+      doc.rect(margin, y, contentWidth, 8, "F");
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("RANK", margin + 3, y + 5.5);
+      doc.text("BARBER", margin + 22, y + 5.5);
+      doc.text("CUTS", margin + 100, y + 5.5);
+      doc.text("REVENUE", margin + 130, y + 5.5);
+      y += 10;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(50, 50, 50);
+      barberBreakdown.forEach((b, i) => {
+        checkPage(8);
+        const medals = ["🥇", "🥈", "🥉"];
+        doc.setFontSize(9);
+        doc.text(i < 3 ? medals[i] : String(i + 1), margin + 5, y + 4);
+        doc.text(b.name, margin + 22, y + 4);
+        doc.text(String(b.cuts), margin + 103, y + 4);
+        doc.text(formatCurrency(b.revenue), margin + 130, y + 4);
+        doc.setDrawColor(240, 240, 240);
+        doc.line(margin, y + 6, margin + contentWidth, y + 6);
+        y += 8;
+      });
+
+      // Total row
+      doc.setFillColor(254, 249, 238);
+      doc.rect(margin, y, contentWidth, 8, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(30, 30, 30);
+      doc.text("Total", margin + 22, y + 5.5);
+      doc.text(String(barberBreakdown.reduce((s, b) => s + b.cuts, 0)), margin + 103, y + 5.5);
+      doc.text(formatCurrency(barberBreakdown.reduce((s, b) => s + b.revenue, 0)), margin + 130, y + 5.5);
+      y += 14;
+    }
+
+    // Cuts Detail
+    checkPage(25);
+    doc.setFillColor(212, 160, 72);
+    doc.rect(margin, y, 3, 7, "F");
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Cuts Detail", margin + 6, y + 6);
+    y += 12;
+
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, contentWidth, 8, "F");
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.text("DATE", margin + 2, y + 5.5);
+    doc.text("SHOP", margin + 38, y + 5.5);
+    doc.text("BARBER", margin + 70, y + 5.5);
+    doc.text("SERVICE", margin + 100, y + 5.5);
+    doc.text("AMOUNT", margin + 135, y + 5.5);
+    doc.text("STATUS", margin + 160, y + 5.5);
+    y += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(7);
+    cuts.forEach((cut) => {
+      checkPage(7);
+      doc.text(new Date(cut.created_at).toLocaleDateString(), margin + 2, y + 4);
+      doc.text(((cut.shops as any)?.name || "N/A").substring(0, 15), margin + 38, y + 4);
+      doc.text(((cut.staff as any)?.name || "N/A").substring(0, 15), margin + 70, y + 4);
+      doc.text(((cut.services as any)?.name || "N/A").substring(0, 15), margin + 100, y + 4);
+      doc.text(formatCurrency(Number(cut.price)), margin + 135, y + 4);
+      doc.text(cut.status, margin + 160, y + 4);
+      doc.setDrawColor(245, 245, 245);
+      doc.line(margin, y + 6, margin + contentWidth, y + 6);
+      y += 7;
+    });
+
+    // Cuts total
+    doc.setFillColor(254, 249, 238);
+    doc.rect(margin, y, contentWidth, 8, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(30, 30, 30);
+    doc.text(`Total (${totalCuts} confirmed cuts)`, margin + 2, y + 5.5);
+    doc.text(formatCurrency(totalRevenue), margin + 135, y + 5.5);
+    y += 14;
+
+    // Expenses Detail
+    checkPage(25);
+    doc.setFillColor(212, 160, 72);
+    doc.rect(margin, y, 3, 7, "F");
+    doc.setTextColor(30, 30, 30);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Expenses Detail", margin + 6, y + 6);
+    y += 12;
+
+    doc.setFillColor(245, 245, 245);
+    doc.rect(margin, y, contentWidth, 8, "F");
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "bold");
+    doc.text("DATE", margin + 2, y + 5.5);
+    doc.text("SHOP", margin + 30, y + 5.5);
+    doc.text("CATEGORY", margin + 65, y + 5.5);
+    doc.text("DESCRIPTION", margin + 100, y + 5.5);
+    doc.text("AMOUNT", margin + 155, y + 5.5);
+    y += 10;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(7);
+    expenses.forEach((e) => {
+      checkPage(7);
+      doc.text(e.expense_date, margin + 2, y + 4);
+      doc.text(((e.shops as any)?.name || "N/A").substring(0, 15), margin + 30, y + 4);
+      doc.text(e.category.substring(0, 12), margin + 65, y + 4);
+      doc.text(e.description.substring(0, 25), margin + 100, y + 4);
+      doc.text(formatCurrency(Number(e.amount)), margin + 155, y + 4);
+      doc.setDrawColor(245, 245, 245);
+      doc.line(margin, y + 6, margin + contentWidth, y + 6);
+      y += 7;
+    });
+
+    // Expenses total
+    doc.setFillColor(254, 249, 238);
+    doc.rect(margin, y, contentWidth, 8, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(30, 30, 30);
+    doc.text("Total Expenses", margin + 2, y + 5.5);
+    doc.text(formatCurrency(totalExpenses), margin + 155, y + 5.5);
+    y += 14;
+
+    // Footer
+    checkPage(10);
+    doc.setTextColor(160, 160, 160);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated by BarberFlow • ${new Date().toLocaleString()}`, pageWidth / 2, y + 4, { align: "center" });
+
+    // Save as blob and trigger download (mobile-compatible)
+    const pdfBlob = doc.output("blob");
+    triggerDownload(pdfBlob, `barberflow-report-${timePeriod}.pdf`);
   };
 
   if (!isOpen) return null;
@@ -624,11 +655,11 @@ export default function ReportDownloadModal({
                           onSelect={(date) => setDateRange((prev) => ({ ...prev, to: date }))}
                           disabled={(date) => date > new Date() || (dateRange.from ? date < dateRange.from : false)}
                           initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </motion.div>
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </motion.div>
               )}
             </AnimatePresence>
 
