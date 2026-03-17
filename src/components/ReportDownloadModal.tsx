@@ -452,7 +452,7 @@ export default function ReportDownloadModal({
       doc.text(((cut.shops as any)?.name || "N/A").substring(0, 15), margin + 38, y + 4);
       doc.text(((cut.staff as any)?.name || "N/A").substring(0, 15), margin + 70, y + 4);
       doc.text(((cut.services as any)?.name || "N/A").substring(0, 15), margin + 100, y + 4);
-      doc.text(formatCurrency(Number(cut.price)), margin + 135, y + 4);
+      doc.text(formatCurrencyPDF(Number(cut.price)), margin + 135, y + 4);
       doc.text(cut.status, margin + 160, y + 4);
       doc.setDrawColor(245, 245, 245);
       doc.line(margin, y + 6, margin + contentWidth, y + 6);
