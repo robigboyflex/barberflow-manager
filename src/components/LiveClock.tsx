@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Clock } from "lucide-react";
 
 interface LiveClockProps {
@@ -6,7 +6,7 @@ interface LiveClockProps {
   showIcon?: boolean;
 }
 
-export default function LiveClock({ className = "", showIcon = true }: LiveClockProps) {
+export default memo(function LiveClock({ className = "", showIcon = true }: LiveClockProps) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -36,4 +36,4 @@ export default function LiveClock({ className = "", showIcon = true }: LiveClock
       </span>
     </div>
   );
-}
+});
