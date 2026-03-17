@@ -78,7 +78,8 @@ export function useShops() {
       todayStart.setHours(0, 0, 0, 0);
       const todayEnd = new Date();
       todayEnd.setHours(23, 59, 59, 999);
-      const todayDate = todayStart.toISOString().split('T')[0];
+      // Use local date components to avoid UTC date shift
+      const todayDate = `${todayStart.getFullYear()}-${String(todayStart.getMonth() + 1).padStart(2, '0')}-${String(todayStart.getDate()).padStart(2, '0')}`;
 
       const [staffResult, cutsResult, expensesResult, shiftsResult] = await Promise.all([
         supabase
