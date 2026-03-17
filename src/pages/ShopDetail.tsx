@@ -215,6 +215,12 @@ export default function ShopDetail() {
               <span className="text-sm">{shop.location}</span>
             </div>
           </div>
+          <OwnerChatSheet
+            shopId={shop.id}
+            shopName={shop.name}
+            ownerId={user?.id || ""}
+            ownerName={user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Owner"}
+          />
           <QRCodeGenerator shopId={shop.id} shopName={shop.name} />
           <Button
             variant="ghost"
