@@ -75,6 +75,7 @@ const roleColors = {
 export default function ShopDetail() {
   const { shopId } = useParams<{ shopId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [shop, setShop] = useState<Shop | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
