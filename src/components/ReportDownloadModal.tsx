@@ -416,7 +416,7 @@ export default function ReportDownloadModal({
       doc.setTextColor(30, 30, 30);
       doc.text("Total", margin + 22, y + 5.5);
       doc.text(String(barberBreakdown.reduce((s, b) => s + b.cuts, 0)), margin + 103, y + 5.5);
-      doc.text(formatCurrency(barberBreakdown.reduce((s, b) => s + b.revenue, 0)), margin + 130, y + 5.5);
+      doc.text(formatCurrencyPDF(barberBreakdown.reduce((s, b) => s + b.revenue, 0)), margin + 130, y + 5.5);
       y += 14;
     }
 
