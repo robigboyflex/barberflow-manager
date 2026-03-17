@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Crown, Medal, Scissors, TrendingUp, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,25 +29,7 @@ export default function BarberLeaderboard({ ownerId }: BarberLeaderboardProps) {
   const [barbers, setBarbers] = useState<BarberStat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchBarberStats();
-
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const channel = supabase
-      .channel("leaderboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "cuts" }, () => {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => fetchBarberStats(), 500);
-      })
-      .subscribe();
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      supabase.removeChannel(channel);
-    };
-  }, [ownerId]);
-
-  const fetchBarberStats = async () => {
+  const fetchBarberStats = useCallback(async () => {
     try {
       const { data: shops } = await supabase
         .from("shops")
@@ -61,13 +43,17 @@ export default function BarberLeaderboard({ ownerId }: BarberLeaderboardProps) {
 
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
 
+      // Use confirmed_at for accurate revenue attribution
       const { data: cuts } = await supabase
         .from("cuts")
         .select("barber_id, price, shop_id, staff!cuts_barber_id_fkey(id, name)")
         .in("shop_id", shopIds)
         .eq("status", "confirmed")
-        .gte("created_at", todayStart.toISOString());
+        .gte("confirmed_at", todayStart.toISOString())
+        .lte("confirmed_at", todayEnd.toISOString());
 
       const map = new Map<string, BarberStat>();
       cuts?.forEach(cut => {
@@ -94,7 +80,25 @@ export default function BarberLeaderboard({ ownerId }: BarberLeaderboardProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [ownerId]);
+
+  useEffect(() => {
+    fetchBarberStats();
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel(`leaderboard-realtime-${ownerId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cuts" }, () => {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchBarberStats(), 500);
+      })
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [ownerId, fetchBarberStats]);
 
   const maxCuts = barbers[0]?.cutsCount || 1;
 
