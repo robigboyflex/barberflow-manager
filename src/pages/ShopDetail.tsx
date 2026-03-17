@@ -590,20 +590,23 @@ function AddStaffInlineModal({
           </div>
 
           {!showSalary ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSalary(true)}
-              className="rounded-full gap-1.5 text-muted-foreground"
-            >
-              <Plus className="w-4 h-4" />
-              Add Salary Info
-            </Button>
+            <div className="text-center py-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSalary(true)}
+                className="rounded-full gap-1.5 text-muted-foreground"
+              >
+                <Plus className="w-4 h-4" />
+                Add Salary Info (optional)
+              </Button>
+              <p className="text-xs text-muted-foreground mt-1">You can add this later</p>
+            </div>
           ) : (
             <div className="space-y-4 rounded-2xl bg-secondary/50 border border-border p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Salary Info</span>
+                <span className="text-sm font-medium">Salary Info <span className="text-xs text-muted-foreground font-normal">(all optional)</span></span>
                 <Button
                   type="button"
                   variant="ghost"
@@ -617,7 +620,7 @@ function AddStaffInlineModal({
 
               {role === "barber" && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Salary Type</label>
+                  <label className="text-sm font-medium">Salary Type <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
                   <select
                     value={salaryType}
                     onChange={(e) => setSalaryType(e.target.value as "fixed" | "percentage" | "per_cut")}
@@ -632,7 +635,7 @@ function AddStaffInlineModal({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  {salaryType === "percentage" && role === "barber" ? "Percentage (%)" : "Salary Amount (GH₵)"}
+                  {salaryType === "percentage" && role === "barber" ? "Percentage (%)" : "Salary Amount (GH₵)"} <span className="text-xs text-muted-foreground font-normal">(optional)</span>
                 </label>
                 <input
                   type="number"
@@ -645,7 +648,7 @@ function AddStaffInlineModal({
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Pay Day (1-31)</label>
+                <label className="text-sm font-medium">Pay Day (1-31) <span className="text-xs text-muted-foreground font-normal">(optional)</span></label>
                 <input
                   type="number"
                   value={salaryPayDay}
