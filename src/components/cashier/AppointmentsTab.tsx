@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { formatCurrency } from "@/lib/currency";
 import { Calendar, Clock, Phone, User, Check, X, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,7 +202,7 @@ export default function AppointmentsTab({
                       </div>
                       <div className="text-right">
                         <span className="text-lg font-bold text-primary">
-                          GH₵{appointment.service_price || 0}
+                          {formatCurrency(appointment.service_price || 0)}
                         </span>
                         {appointment.preferred_barber && (
                           <p className="text-xs text-muted-foreground mt-1">
@@ -244,7 +245,7 @@ export default function AppointmentsTab({
                         </span>
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        GH₵{appointment.service_price || 0}
+                        {formatCurrency(appointment.service_price || 0)}
                       </span>
                     </div>
                   </div>

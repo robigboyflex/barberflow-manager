@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { 
   LogOut, 
@@ -21,6 +21,7 @@ import PreviousDayRevenue from "@/components/cashier/PreviousDayRevenue";
 import CashierChatSheet from "@/components/messaging/CashierChatSheet";
 import LiveClock from "@/components/LiveClock";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
+import { formatCurrency } from "@/lib/currency";
 
 interface ActivityItem {
   id: string;
@@ -104,38 +105,7 @@ export default function CashierPortal() {
     }
   }, [isClockedIn, currentShiftStart]);
 
-  useEffect(() => {
-    if (!isAuthenticated || !staff) {
-      navigate("/staff-login");
-      return;
-    }
-    if (staff.role !== "cashier") {
-      toast.error("Access denied. Cashiers only.");
-      navigate("/staff-login");
-      return;
-    }
-    fetchData();
-
-    // Debounced realtime: single channel, 500ms debounce to prevent rapid refetches
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    const debouncedFetch = () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => fetchData(), 500);
-    };
-
-    const channel = supabase
-      .channel("cashier-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "cuts", filter: `shop_id=eq.${staff.shop_id}` }, debouncedFetch)
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `shop_id=eq.${staff.shop_id}` }, debouncedFetch)
-      .subscribe();
-
-    return () => {
-      if (debounceTimer) clearTimeout(debounceTimer);
-      supabase.removeChannel(channel);
-    };
-  }, [isAuthenticated, staff]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!staff) return;
     const sessionToken = getSessionToken();
     if (!sessionToken) {
@@ -179,10 +149,16 @@ export default function CashierPortal() {
       if (cutsError) throw cutsError;
 
       const confirmedCuts = allShopCuts?.filter((c: any) => c.status === 'confirmed') || [];
-      const myServicesCount = confirmedCuts.length;
-      const myEarnings = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
+      const allCuts = allShopCuts || [];
+      
+      // "My Services" = confirmed by this cashier
+      const myConfirmed = confirmedCuts;
+      const myServicesCount = myConfirmed.length;
+      const myEarnings = myConfirmed.reduce((sum: number, c: any) => sum + Number(c.price), 0);
+      
+      // "Shop" = all confirmed cuts for the shop today
       const shopServicesCount = confirmedCuts.length;
-      const shopRevenue = myEarnings;
+      const shopRevenue = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
 
       // Fetch today's expenses via RPC (direct table query blocked by RLS for staff)
       const { data: expensesData } = await supabase.rpc('get_shop_expenses_for_cashier', {
@@ -233,8 +209,8 @@ export default function CashierPortal() {
         activities.push({
           id: cut.id,
           type: "payment",
-          description: `${cut.service_name}${clientPart} - GH₵${Number(cut.price).toFixed(0)} (${cut.payment_method || "cash"})`,
-          timestamp: cut.created_at,
+          description: `${cut.service_name}${clientPart} - ${formatCurrency(Number(cut.price))} (${cut.payment_method || "cash"})`,
+          timestamp: cut.confirmed_at || cut.created_at,
           amount: Number(cut.price),
           paymentMethod: cut.payment_method || "cash",
         });
@@ -276,7 +252,39 @@ export default function CashierPortal() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [staff, getSessionToken, navigate, logout]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !staff) {
+      navigate("/staff-login");
+      return;
+    }
+    if (staff.role !== "cashier") {
+      toast.error("Access denied. Cashiers only.");
+      navigate("/staff-login");
+      return;
+    }
+    fetchData();
+
+    // Debounced realtime: single channel, 500ms debounce to prevent rapid refetches
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchData(), 500);
+    };
+
+    const channel = supabase
+      .channel(`cashier-realtime-${staff.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cuts", filter: `shop_id=eq.${staff.shop_id}` }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `shop_id=eq.${staff.shop_id}` }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "shifts", filter: `shop_id=eq.${staff.shop_id}` }, debouncedFetch)
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, staff, fetchData]);
 
   const handleClockIn = async () => {
     if (!staff) return;
@@ -392,7 +400,7 @@ export default function CashierPortal() {
               <div className="text-right">
                 <p className="text-blue-100 text-sm">Earnings</p>
                 <h2 className="text-3xl font-display text-white mt-1">
-                  GH₵{summary.myEarnings.toFixed(0)}
+                  {formatCurrency(summary.myEarnings)}
                 </h2>
               </div>
             </div>
@@ -506,21 +514,21 @@ export default function CashierPortal() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-display text-green-500">
-                  GH₵{summary.shopRevenue.toFixed(0)}
+                <p className="text-2xl font-display text-success">
+                  {formatCurrency(summary.shopRevenue)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Expenses</p>
                 <p className="text-2xl font-display text-destructive">
-                  GH₵{summary.shopExpenses.toFixed(0)}
+                  {formatCurrency(summary.shopExpenses)}
                 </p>
               </div>
             </div>
             <div className="border-t border-border pt-3 flex items-center justify-between">
               <p className="text-sm text-muted-foreground">Net Today</p>
-              <p className={`text-2xl font-display ${netToday >= 0 ? 'text-green-500' : 'text-destructive'}`}>
-                GH₵{netToday.toFixed(0)}
+              <p className={`text-2xl font-display ${netToday >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {formatCurrency(netToday)}
               </p>
             </div>
           </motion.div>
@@ -548,12 +556,12 @@ export default function CashierPortal() {
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-green-500/10 flex items-center justify-center">
-                        <Scissors className="w-4 h-4 text-green-500" />
+                      <div className="w-9 h-9 rounded-full bg-success/10 flex items-center justify-center">
+                        <Scissors className="w-4 h-4 text-success" />
                       </div>
                       <span className="text-foreground font-medium">{barber.name}</span>
                     </div>
-                    <span className="text-sm text-green-500 font-medium bg-green-500/10 px-3 py-1 rounded-full">
+                    <span className="text-sm text-success font-medium bg-success/10 px-3 py-1 rounded-full">
                       {barber.cutCount} cuts
                     </span>
                   </div>

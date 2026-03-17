@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -10,9 +10,7 @@ import {
   Users, 
   Store,
   Calendar as CalendarIcon,
-  ChevronDown,
   Award,
-  Clock,
   FileText,
   Download,
   ArrowLeft
@@ -94,66 +92,7 @@ export default function OwnerAnalytics() {
     }
   }, [user?.id]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    if (shops.length > 0 || selectedShop === "all") {
-      // Only fetch if not custom, or if custom has valid date range
-      if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
-        fetchAnalytics();
-      }
-    }
-  }, [selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to, user?.id]);
-
-  // Real-time subscriptions for cuts and expenses + polling fallback
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const shouldFetch = () => timePeriod !== "custom" || (dateRange.from && dateRange.to);
-
-    const cutsChannel = supabase
-      .channel("analytics-cuts-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "cuts" }, () => {
-        if (shouldFetch()) fetchAnalytics();
-      })
-      .subscribe();
-
-    const expensesChannel = supabase
-      .channel("analytics-expenses-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => {
-        if (shouldFetch()) fetchAnalytics();
-      })
-      .subscribe();
-
-    // Polling fallback every 15 seconds in case realtime events are missed
-    const pollInterval = setInterval(() => {
-      if (shouldFetch()) fetchAnalytics();
-    }, 15000);
-
-    return () => {
-      supabase.removeChannel(cutsChannel);
-      supabase.removeChannel(expensesChannel);
-      clearInterval(pollInterval);
-    };
-  }, [user?.id, selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to]);
-
-  const fetchShops = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from("shops")
-        .select("id, name")
-        .eq("owner_id", user.id)
-        .order("name");
-
-      if (error) throw error;
-      setShops(data || []);
-    } catch (error) {
-      console.error("Error fetching shops:", error);
-    }
-  };
-
-  const getDateRangeForPeriod = (period: TimePeriod) => {
+  const getDateRangeForPeriod = useCallback((period: TimePeriod) => {
     const now = new Date();
     const start = new Date();
     
@@ -199,58 +138,47 @@ export default function OwnerAnalytics() {
       startDate: format(start, "yyyy-MM-dd"),
       endDate: format(now, "yyyy-MM-dd"),
     };
-  };
+  }, [dateRange.from, dateRange.to]);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     if (!user) return;
     setIsLoading(true);
 
     try {
-      const { startIso, endIso, startDate, endDate } = getDateRangeForPeriod(timePeriod);
+      const range = getDateRangeForPeriod(timePeriod);
+      if (!range) return;
+      const { startIso, endIso, startDate, endDate } = range;
       const shopIds = selectedShop === "all" ? shops.map((s) => s.id) : [selectedShop];
 
       if (shopIds.length === 0) {
-        setSummary({
-          totalRevenue: 0,
-          totalExpenses: 0,
-          netProfit: 0,
-          totalCuts: 0,
-          avgRevenuePerCut: 0,
-        });
+        setSummary({ totalRevenue: 0, totalExpenses: 0, netProfit: 0, totalCuts: 0, avgRevenuePerCut: 0 });
         setBarberStats([]);
         setIsLoading(false);
         return;
       }
 
-      const { data: cutsData, error: cutsError } = await supabase
-        .from("cuts")
-        .select(`
-          id,
-          price,
-          status,
-          barber_id,
-          confirmed_at,
-          staff!cuts_barber_id_fkey (id, name)
-        `)
-        .in("shop_id", shopIds)
-        .eq("status", "confirmed")
-        .gte("confirmed_at", startIso)
-        .lte("confirmed_at", endIso);
+      const [cutsResult, expensesResult] = await Promise.all([
+        supabase
+          .from("cuts")
+          .select(`id, price, status, barber_id, confirmed_at, staff!cuts_barber_id_fkey (id, name)`)
+          .in("shop_id", shopIds)
+          .eq("status", "confirmed")
+          .gte("confirmed_at", startIso)
+          .lte("confirmed_at", endIso),
+        supabase
+          .from("expenses")
+          .select("amount, expense_date")
+          .in("shop_id", shopIds)
+          .gte("expense_date", startDate)
+          .lte("expense_date", endDate),
+      ]);
 
-      if (cutsError) throw cutsError;
+      if (cutsResult.error) throw cutsResult.error;
+      if (expensesResult.error) throw expensesResult.error;
 
-      const { data: expensesData, error: expensesError } = await supabase
-        .from("expenses")
-        .select("amount, expense_date")
-        .in("shop_id", shopIds)
-        .gte("expense_date", startDate)
-        .lte("expense_date", endDate);
-
-      if (expensesError) throw expensesError;
-
-      const confirmedCuts = cutsData || [];
+      const confirmedCuts = cutsResult.data || [];
       const totalRevenue = confirmedCuts.reduce((sum, cut) => sum + Number(cut.price || 0), 0);
-      const totalExpenses = expensesData?.reduce((sum, expense) => sum + Number(expense.amount || 0), 0) || 0;
+      const totalExpenses = expensesResult.data?.reduce((sum, expense) => sum + Number(expense.amount || 0), 0) || 0;
       const totalCuts = confirmedCuts.length;
 
       setSummary({
@@ -292,6 +220,66 @@ export default function OwnerAnalytics() {
       toast.error("Failed to load analytics");
     } finally {
       setIsLoading(false);
+    }
+  }, [user, timePeriod, selectedShop, shops, getDateRangeForPeriod]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (shops.length > 0 || selectedShop === "all") {
+      if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
+        fetchAnalytics();
+      }
+    }
+  }, [selectedShop, timePeriod, shops.length, dateRange.from, dateRange.to, user?.id, fetchAnalytics]);
+
+  // Consolidated realtime subscription + polling fallback
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
+          fetchAnalytics();
+        }
+      }, 500);
+    };
+
+    const channel = supabase
+      .channel(`analytics-realtime-${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cuts" }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, debouncedFetch)
+      .subscribe();
+
+    // Polling fallback every 15 seconds
+    const pollInterval = setInterval(() => {
+      if (timePeriod !== "custom" || (dateRange.from && dateRange.to)) {
+        fetchAnalytics();
+      }
+    }, 15000);
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
+  }, [user?.id, fetchAnalytics, timePeriod, dateRange.from, dateRange.to]);
+
+  const fetchShops = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("shops")
+        .select("id, name")
+        .eq("owner_id", user.id)
+        .order("name");
+
+      if (error) throw error;
+      setShops(data || []);
+    } catch (error) {
+      console.error("Error fetching shops:", error);
     }
   };
 

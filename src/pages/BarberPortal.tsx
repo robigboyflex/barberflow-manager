@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { 
   Scissors, 
@@ -46,20 +46,7 @@ export default function BarberPortal() {
   const [isLoggingCut, setIsLoggingCut] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  useEffect(() => {
-    if (!isAuthenticated || !staff) {
-      navigate("/staff-login");
-      return;
-    }
-    if (staff.role !== "barber") {
-      toast.error("Access denied. Barbers only.");
-      navigate("/staff-login");
-      return;
-    }
-    fetchData();
-  }, [isAuthenticated, staff]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!staff) return;
     
     const sessionToken = getSessionToken();
@@ -132,7 +119,37 @@ export default function BarberPortal() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [staff, getSessionToken, logout, navigate]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !staff) {
+      navigate("/staff-login");
+      return;
+    }
+    if (staff.role !== "barber") {
+      toast.error("Access denied. Barbers only.");
+      navigate("/staff-login");
+      return;
+    }
+    fetchData();
+
+    // Realtime subscription so barber sees confirmed/disputed status updates
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchData(), 500);
+    };
+
+    const channel = supabase
+      .channel(`barber-realtime-${staff.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "cuts", filter: `barber_id=eq.${staff.id}` }, debouncedFetch)
+      .subscribe();
+
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, staff, fetchData]);
 
   const handleLogCut = async () => {
     if (!selectedService || !staff) return;
