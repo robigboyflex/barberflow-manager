@@ -64,9 +64,12 @@ export default function PreviousDayRevenue() {
 
     setIsLoading(true);
     try {
-      const dateStr = selectedDate.toISOString().split("T")[0];
-      const startOfDay = new Date(dateStr + "T00:00:00.000Z");
-      const endOfDay = new Date(dateStr + "T23:59:59.999Z");
+      // Use local timezone boundaries to prevent cross-day bleeding
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      const dateStr = startOfDay.toISOString().split("T")[0];
 
       const [cutsResult, expensesResult] = await Promise.all([
         supabase.rpc("get_shop_cuts_for_cashier", {
