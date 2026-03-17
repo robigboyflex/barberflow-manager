@@ -38,7 +38,7 @@ export default function Header() {
           {primaryShop && user && (
             <OwnerChatSheet
               shopId={primaryShop.id}
-              shopName={primaryShop.name}
+              shopName={primaryShop.cashierOnDuty || primaryShop.name}
               ownerId={user.id}
               ownerName={ownerName}
             />
