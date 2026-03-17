@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Store, ChevronRight, Scissors, CreditCard, Sparkles, DollarSign, Pencil, Key } from "lucide-react";
+import { Users, Store, ChevronRight, Scissors, CreditCard, Sparkles, DollarSign, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Sheet,
@@ -24,7 +24,7 @@ interface StaffMember {
   is_active: boolean;
   phone: string | null;
   pin: string;
-  pin_plain: string | null;
+  pin_plain?: string | null;
   salary_type: string | null;
   salary_amount: number | null;
   salary_pay_day: number | null;
@@ -81,7 +81,7 @@ export default function StaffManagementSheet({
       const shopIds = shops.map((s) => s.id);
       const { data, error } = await supabase
         .from("staff")
-        .select("id, name, role, shop_id, is_active, phone, pin, pin_plain, salary_type, salary_amount, salary_pay_day")
+        .select("id, name, role, shop_id, is_active, phone, pin, salary_type, salary_amount, salary_pay_day")
         .in("shop_id", shopIds)
         .eq("is_active", true)
         .order("name");
@@ -199,14 +199,6 @@ export default function StaffManagementSheet({
                                   <span className="text-sm text-foreground">
                                     {staff.name}
                                   </span>
-                                  {staff.pin_plain && (
-                                    <div className="flex items-center gap-1">
-                                      <Key className="w-2.5 h-2.5 text-muted-foreground" />
-                                      <span className="text-[10px] text-muted-foreground font-mono">
-                                        PIN: {staff.pin_plain}
-                                      </span>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
