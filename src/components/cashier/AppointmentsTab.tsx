@@ -245,7 +245,7 @@ export default function AppointmentsTab({
                         </span>
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        GH₵{appointment.service_price || 0}
+                        {formatCurrency(appointment.service_price || 0)}
                       </span>
                     </div>
                   </div>
