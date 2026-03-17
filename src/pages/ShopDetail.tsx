@@ -589,47 +589,75 @@ function AddStaffInlineModal({
             />
           </div>
 
-          {role === "barber" && salaryAmount && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Salary Type (optional)</label>
-              <select
-                value={salaryType}
-                onChange={(e) => setSalaryType(e.target.value as "fixed" | "percentage" | "per_cut")}
-                className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
-              >
-                <option value="fixed">Fixed Monthly</option>
-                <option value="percentage">% per Cut</option>
-                <option value="per_cut">Per Cut</option>
-              </select>
+          {!showSalary ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSalary(true)}
+              className="rounded-full gap-1.5 text-muted-foreground"
+            >
+              <Plus className="w-4 h-4" />
+              Add Salary Info
+            </Button>
+          ) : (
+            <div className="space-y-4 rounded-2xl bg-secondary/50 border border-border p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Salary Info</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setShowSalary(false); setSalaryAmount(""); setSalaryPayDay(""); setSalaryType("fixed"); }}
+                  className="h-7 text-xs text-muted-foreground"
+                >
+                  Remove
+                </Button>
+              </div>
+
+              {role === "barber" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Salary Type</label>
+                  <select
+                    value={salaryType}
+                    onChange={(e) => setSalaryType(e.target.value as "fixed" | "percentage" | "per_cut")}
+                    className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+                  >
+                    <option value="fixed">Fixed Monthly</option>
+                    <option value="percentage">% per Cut</option>
+                    <option value="per_cut">Per Cut</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  {salaryType === "percentage" && role === "barber" ? "Percentage (%)" : "Salary Amount (GH₵)"}
+                </label>
+                <input
+                  type="number"
+                  value={salaryAmount}
+                  onChange={(e) => setSalaryAmount(e.target.value)}
+                  placeholder={salaryType === "percentage" ? "e.g. 30" : "e.g. 1500"}
+                  min="0"
+                  className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Pay Day (1-31)</label>
+                <input
+                  type="number"
+                  value={salaryPayDay}
+                  onChange={(e) => setSalaryPayDay(e.target.value)}
+                  placeholder="e.g. 25"
+                  min="1"
+                  max="31"
+                  className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
+                />
+              </div>
             </div>
           )}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              {salaryType === "percentage" && role === "barber" ? "Percentage (%) (optional)" : "Salary Amount (GH₵) (optional)"}
-            </label>
-            <input
-              type="number"
-              value={salaryAmount}
-              onChange={(e) => setSalaryAmount(e.target.value)}
-              placeholder={salaryType === "percentage" ? "e.g. 30" : "e.g. 1500"}
-              min="0"
-              className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Salary Pay Day (1-31) (optional)</label>
-            <input
-              type="number"
-              value={salaryPayDay}
-              onChange={(e) => setSalaryPayDay(e.target.value)}
-              placeholder="e.g. 25"
-              min="1"
-              max="31"
-              className="w-full h-12 rounded-xl bg-secondary border border-border px-4"
-            />
-          </div>
         </div>
 
         <div className="p-4 border-t border-border">
