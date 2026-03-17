@@ -80,15 +80,18 @@ export default function CashierChatSheet() {
     return () => { supabase.removeChannel(channel); };
   }, [staff?.shop_id]);
 
+  // Poll for new messages when sheet is open (realtime may not work due to RLS)
   useEffect(() => {
-    if (isOpen) {
-      markAsRead();
-      setUnreadCount(0);
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-      }, 100);
-    }
-  }, [isOpen, messages.length]);
+    if (!isOpen || !staff) return;
+    markAsRead();
+    setUnreadCount(0);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    }, 100);
+
+    const pollInterval = setInterval(() => fetchMessages(), 5000);
+    return () => clearInterval(pollInterval);
+  }, [isOpen, staff?.shop_id]);
 
   const handleSend = async () => {
     if (!newMessage.trim() || isSending || !staff) return;
