@@ -185,8 +185,8 @@ export default function CashierPortal() {
       const { data: expensesData } = await supabase.rpc('get_shop_expenses_for_cashier', {
         p_cashier_id: staff.id,
         p_session_token: sessionToken,
-        p_start_date: today.toISOString().split('T')[0],
-        p_end_date: today.toISOString().split('T')[0],
+        p_start_date: todayDateStr,
+        p_end_date: todayDateStr,
       });
 
       const shopExpenses = expensesData?.reduce((sum: number, e: any) => sum + Number(e.amount), 0) || 0;
