@@ -32,14 +32,19 @@ export default function BarberLeaderboard({ ownerId }: BarberLeaderboardProps) {
   useEffect(() => {
     fetchBarberStats();
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel("leaderboard-realtime")
       .on("postgres_changes", { event: "*", schema: "public", table: "cuts" }, () => {
-        fetchBarberStats();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchBarberStats(), 500);
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
+    };
   }, [ownerId]);
 
   const fetchBarberStats = async () => {
