@@ -466,7 +466,7 @@ export default function ReportDownloadModal({
     doc.setFontSize(8);
     doc.setTextColor(30, 30, 30);
     doc.text(`Total (${totalCuts} confirmed cuts)`, margin + 2, y + 5.5);
-    doc.text(formatCurrency(totalRevenue), margin + 135, y + 5.5);
+    doc.text(formatCurrencyPDF(totalRevenue), margin + 135, y + 5.5);
     y += 14;
 
     // Expenses Detail
