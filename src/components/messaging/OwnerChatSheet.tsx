@@ -93,7 +93,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
       markAsRead();
       setUnreadCount(0);
       setTimeout(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+        scrollEndRef.current?.scrollIntoView({ behavior: "instant" });
       }, 100);
     }
   }, [isOpen, messages.length]);
