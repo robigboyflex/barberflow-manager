@@ -17,6 +17,7 @@ import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
 import CloseShiftModal from "@/components/cashier/CloseShiftModal";
 import AddExpenseModal from "@/components/cashier/AddExpenseModal";
+import CashierChatSheet from "@/components/messaging/CashierChatSheet";
 import LiveClock from "@/components/LiveClock";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 
@@ -343,13 +344,16 @@ export default function CashierPortal() {
               </div>
               <LiveClock className="mt-1" />
             </div>
-            <motion.button
-              onClick={handleLogout}
-              className="w-12 h-12 rounded-full border border-destructive/30 flex items-center justify-center"
-              whileTap={{ scale: 0.9 }}
-            >
-              <LogOut className="w-5 h-5 text-destructive" />
-            </motion.button>
+            <div className="flex items-center gap-2">
+              <CashierChatSheet />
+              <motion.button
+                onClick={handleLogout}
+                className="w-12 h-12 rounded-full border border-destructive/30 flex items-center justify-center"
+                whileTap={{ scale: 0.9 }}
+              >
+                <LogOut className="w-5 h-5 text-destructive" />
+              </motion.button>
+            </div>
           </div>
         </header>
 

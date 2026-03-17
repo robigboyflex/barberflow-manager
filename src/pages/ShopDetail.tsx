@@ -33,6 +33,8 @@ import AnimatedPage from "@/components/AnimatedPage";
 import AddShopModal from "@/components/AddShopModal";
 import EditServiceModal from "@/components/EditServiceModal";
 import QRCodeGenerator from "@/components/QRCodeGenerator";
+import OwnerChatSheet from "@/components/messaging/OwnerChatSheet";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currency";
 
 interface Shop {
@@ -73,6 +75,7 @@ const roleColors = {
 export default function ShopDetail() {
   const { shopId } = useParams<{ shopId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [shop, setShop] = useState<Shop | null>(null);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -213,6 +216,12 @@ export default function ShopDetail() {
               <span className="text-sm">{shop.location}</span>
             </div>
           </div>
+          <OwnerChatSheet
+            shopId={shop.id}
+            shopName={shop.name}
+            ownerId={user?.id || ""}
+            ownerName={user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Owner"}
+          />
           <QRCodeGenerator shopId={shop.id} shopName={shop.name} />
           <Button
             variant="ghost"

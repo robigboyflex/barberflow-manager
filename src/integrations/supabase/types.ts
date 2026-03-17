@@ -409,6 +409,57 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          reply_to: string | null
+          sender_id: string
+          sender_name: string
+          sender_type: string
+          shop_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          reply_to?: string | null
+          sender_id: string
+          sender_name: string
+          sender_type: string
+          shop_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          reply_to?: string | null
+          sender_id?: string
+          sender_name?: string
+          sender_type?: string
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -750,6 +801,10 @@ export type Database = {
       }
       cleanup_expired_sessions: { Args: never; Returns: undefined }
       cleanup_old_pin_attempts: { Args: never; Returns: undefined }
+      clear_activities_by_date: {
+        Args: { p_date: string; p_owner_id: string }
+        Returns: number
+      }
       close_shift: {
         Args: {
           p_session_token: string
@@ -902,6 +957,22 @@ export type Database = {
           shift_id: string
         }[]
       }
+      get_staff_messages: {
+        Args: { p_limit?: number; p_session_token: string; p_staff_id: string }
+        Returns: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          reply_content: string
+          reply_sender_name: string
+          reply_to: string
+          sender_id: string
+          sender_name: string
+          sender_type: string
+          shop_id: string
+        }[]
+      }
       get_staff_today_shifts: {
         Args: { p_session_token: string; p_staff_id: string }
         Returns: {
@@ -940,6 +1011,10 @@ export type Database = {
         }
         Returns: string
       }
+      mark_staff_messages_read: {
+        Args: { p_session_token: string; p_staff_id: string }
+        Returns: undefined
+      }
       record_expense:
         | {
             Args: {
@@ -962,6 +1037,15 @@ export type Database = {
             }
             Returns: string
           }
+      send_staff_message: {
+        Args: {
+          p_content: string
+          p_reply_to?: string
+          p_session_token: string
+          p_staff_id: string
+        }
+        Returns: string
+      }
       staff_clock_in: {
         Args: { p_session_token: string; p_shop_id: string; p_staff_id: string }
         Returns: string
