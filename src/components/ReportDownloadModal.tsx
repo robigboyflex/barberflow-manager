@@ -513,7 +513,7 @@ export default function ReportDownloadModal({
     doc.setFontSize(8);
     doc.setTextColor(30, 30, 30);
     doc.text("Total Expenses", margin + 2, y + 5.5);
-    doc.text(formatCurrency(totalExpenses), margin + 155, y + 5.5);
+    doc.text(formatCurrencyPDF(totalExpenses), margin + 155, y + 5.5);
     y += 14;
 
     // Footer
