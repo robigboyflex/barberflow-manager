@@ -116,19 +116,22 @@ export default function CashierPortal() {
     }
     fetchData();
 
-    const cutsChannel = supabase
-      .channel("cashier-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "cuts", filter: `shop_id=eq.${staff.shop_id}` }, () => fetchData())
-      .subscribe();
+    // Debounced realtime: single channel, 500ms debounce to prevent rapid refetches
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedFetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => fetchData(), 500);
+    };
 
-    const expensesChannel = supabase
-      .channel("cashier-expenses-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `shop_id=eq.${staff.shop_id}` }, () => fetchData())
+    const channel = supabase
+      .channel("cashier-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "cuts", filter: `shop_id=eq.${staff.shop_id}` }, debouncedFetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `shop_id=eq.${staff.shop_id}` }, debouncedFetch)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(cutsChannel);
-      supabase.removeChannel(expensesChannel);
+      if (debounceTimer) clearTimeout(debounceTimer);
+      supabase.removeChannel(channel);
     };
   }, [isAuthenticated, staff]);
 
