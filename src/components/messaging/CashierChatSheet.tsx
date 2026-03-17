@@ -86,7 +86,7 @@ export default function CashierChatSheet() {
     markAsRead();
     setUnreadCount(0);
     setTimeout(() => {
-      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      scrollEndRef.current?.scrollIntoView({ behavior: "instant" });
     }, 100);
 
     const pollInterval = setInterval(() => fetchMessages(), 5000);
