@@ -93,6 +93,13 @@ export default function CashierChatSheet() {
     return () => clearInterval(pollInterval);
   }, [isOpen, staff?.shop_id]);
 
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (isOpen && scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight });
+    }
+  }, [messages.length, isOpen]);
+
   const handleSend = async () => {
     if (!newMessage.trim() || isSending || !staff) return;
     const token = getSessionToken();
