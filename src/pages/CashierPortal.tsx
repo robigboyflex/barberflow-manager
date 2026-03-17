@@ -17,6 +17,7 @@ import AnimatedPage from "@/components/AnimatedPage";
 import RecordPaymentModal from "@/components/cashier/RecordPaymentModal";
 import CloseShiftModal from "@/components/cashier/CloseShiftModal";
 import AddExpenseModal from "@/components/cashier/AddExpenseModal";
+import CashierChatSheet from "@/components/messaging/CashierChatSheet";
 import LiveClock from "@/components/LiveClock";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 
