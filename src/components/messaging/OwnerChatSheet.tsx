@@ -113,6 +113,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
       if (error) throw error;
       setNewMessage("");
       setReplyTo(null);
+      fetchMessages();
     } catch (err) {
       toast.error("Failed to send message");
     } finally {
