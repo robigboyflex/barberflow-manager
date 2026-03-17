@@ -95,8 +95,10 @@ export default function CashierChatSheet() {
 
   // Auto-scroll when messages change
   useEffect(() => {
-    if (isOpen && scrollRef.current) {
-      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight });
+    if (isOpen) {
+      setTimeout(() => {
+        scrollEndRef.current?.scrollIntoView({ behavior: "instant" });
+      }, 50);
     }
   }, [messages.length, isOpen]);
 
