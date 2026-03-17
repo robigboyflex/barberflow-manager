@@ -500,7 +500,7 @@ export default function ReportDownloadModal({
       doc.text(((e.shops as any)?.name || "N/A").substring(0, 15), margin + 30, y + 4);
       doc.text(e.category.substring(0, 12), margin + 65, y + 4);
       doc.text(e.description.substring(0, 25), margin + 100, y + 4);
-      doc.text(formatCurrency(Number(e.amount)), margin + 155, y + 4);
+      doc.text(formatCurrencyPDF(Number(e.amount)), margin + 155, y + 4);
       doc.setDrawColor(245, 245, 245);
       doc.line(margin, y + 6, margin + contentWidth, y + 6);
       y += 7;
