@@ -464,6 +464,7 @@ function AddStaffInlineModal({
   const [salaryAmount, setSalaryAmount] = useState("");
   const [salaryPayDay, setSalaryPayDay] = useState("");
   const [salaryType, setSalaryType] = useState<"fixed" | "percentage" | "per_cut">("fixed");
+  const [showSalary, setShowSalary] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
