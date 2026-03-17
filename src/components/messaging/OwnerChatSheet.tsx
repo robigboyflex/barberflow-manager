@@ -161,6 +161,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
                 />
               ))
             )}
+            <div ref={scrollEndRef} />
           </div>
         </ScrollArea>
 
