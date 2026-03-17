@@ -108,6 +108,7 @@ export default function CashierChatSheet() {
       if (error) throw error;
       setNewMessage("");
       setReplyTo(null);
+      fetchMessages(); // Manually refetch since realtime may not trigger for RPC inserts
     } catch (err) {
       toast.error("Failed to send message");
     } finally {
