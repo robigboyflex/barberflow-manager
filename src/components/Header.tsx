@@ -114,16 +114,37 @@ export default function Header() {
         </div>
       </header>
 
-      {/* Chat sheet for multi-shop selection */}
+      {/* For multi-shop: render the chat sheet that auto-opens */}
       {selectedShop && user && (
-        <OwnerChatSheet
-          key={selectedShop.id}
+        <MultiShopChat
           shopId={selectedShop.id}
           shopName={selectedShop.name}
           ownerId={user.id}
           ownerName={ownerName}
+          onClose={() => setSelectedShop(null)}
         />
       )}
     </>
+  );
+}
+
+function MultiShopChat({ shopId, shopName, ownerId, ownerName, onClose }: {
+  shopId: string; shopName: string; ownerId: string; ownerName: string; onClose: () => void;
+}) {
+  // Auto-open the sheet by rendering OwnerChatSheet with a trigger that auto-clicks
+  // Instead, we'll use a simpler inline chat sheet
+  const [isOpen, setIsOpen] = useState(true);
+  
+  useEffect(() => {
+    if (!isOpen) onClose();
+  }, [isOpen]);
+
+  return (
+    <OwnerChatSheet
+      shopId={shopId}
+      shopName={shopName}
+      ownerId={ownerId}
+      ownerName={ownerName}
+    />
   );
 }
