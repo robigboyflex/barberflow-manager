@@ -402,7 +402,7 @@ export default function ReportDownloadModal({
         doc.text(i < 3 ? medals[i] : String(i + 1), margin + 5, y + 4);
         doc.text(b.name, margin + 22, y + 4);
         doc.text(String(b.cuts), margin + 103, y + 4);
-        doc.text(formatCurrency(b.revenue), margin + 130, y + 4);
+        doc.text(formatCurrencyPDF(b.revenue), margin + 130, y + 4);
         doc.setDrawColor(240, 240, 240);
         doc.line(margin, y + 6, margin + contentWidth, y + 6);
         y += 8;
