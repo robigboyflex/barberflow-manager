@@ -397,9 +397,9 @@ export default function ReportDownloadModal({
       doc.setTextColor(50, 50, 50);
       barberBreakdown.forEach((b, i) => {
         checkPage(8);
-        const medals = ["🥇", "🥈", "🥉"];
+        const medalLabels = ["#1", "#2", "#3"];
         doc.setFontSize(9);
-        doc.text(i < 3 ? medals[i] : String(i + 1), margin + 5, y + 4);
+        doc.text(i < 3 ? medalLabels[i] : String(i + 1), margin + 5, y + 4);
         doc.text(b.name, margin + 22, y + 4);
         doc.text(String(b.cuts), margin + 103, y + 4);
         doc.text(formatCurrencyPDF(b.revenue), margin + 130, y + 4);
