@@ -19,7 +19,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/currency";
+import { formatCurrency, formatCurrencyPDF } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 interface Shop {
