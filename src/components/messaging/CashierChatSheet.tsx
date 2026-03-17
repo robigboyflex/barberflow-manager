@@ -80,15 +80,25 @@ export default function CashierChatSheet() {
     return () => { supabase.removeChannel(channel); };
   }, [staff?.shop_id]);
 
+  // Poll for new messages when sheet is open (realtime may not work due to RLS)
   useEffect(() => {
-    if (isOpen) {
-      markAsRead();
-      setUnreadCount(0);
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-      }, 100);
+    if (!isOpen || !staff) return;
+    markAsRead();
+    setUnreadCount(0);
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    }, 100);
+
+    const pollInterval = setInterval(() => fetchMessages(), 5000);
+    return () => clearInterval(pollInterval);
+  }, [isOpen, staff?.shop_id]);
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    if (isOpen && scrollRef.current) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight });
     }
-  }, [isOpen, messages.length]);
+  }, [messages.length, isOpen]);
 
   const handleSend = async () => {
     if (!newMessage.trim() || isSending || !staff) return;
@@ -108,6 +118,7 @@ export default function CashierChatSheet() {
       if (error) throw error;
       setNewMessage("");
       setReplyTo(null);
+      fetchMessages(); // Manually refetch since realtime may not trigger for RPC inserts
     } catch (err) {
       toast.error("Failed to send message");
     } finally {
