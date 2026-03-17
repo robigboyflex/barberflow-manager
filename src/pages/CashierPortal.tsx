@@ -146,6 +146,8 @@ export default function CashierPortal() {
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      // Use local date components to avoid UTC date shift for date-only queries
+      const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
       // Check for active shift
       const { data: activeShift, error: shiftError } = await supabase.rpc('get_staff_active_shift', {
@@ -183,8 +185,8 @@ export default function CashierPortal() {
       const { data: expensesData } = await supabase.rpc('get_shop_expenses_for_cashier', {
         p_cashier_id: staff.id,
         p_session_token: sessionToken,
-        p_start_date: today.toISOString().split('T')[0],
-        p_end_date: today.toISOString().split('T')[0],
+        p_start_date: todayDateStr,
+        p_end_date: todayDateStr,
       });
 
       const shopExpenses = expensesData?.reduce((sum: number, e: any) => sum + Number(e.amount), 0) || 0;
