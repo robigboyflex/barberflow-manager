@@ -69,7 +69,8 @@ export default function PreviousDayRevenue() {
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(selectedDate);
       endOfDay.setHours(23, 59, 59, 999);
-      const dateStr = startOfDay.toISOString().split("T")[0];
+      // Use local date components to avoid UTC date shift
+      const dateStr = `${startOfDay.getFullYear()}-${String(startOfDay.getMonth() + 1).padStart(2, '0')}-${String(startOfDay.getDate()).padStart(2, '0')}`;
 
       const [cutsResult, expensesResult] = await Promise.all([
         supabase.rpc("get_shop_cuts_for_cashier", {

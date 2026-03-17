@@ -30,7 +30,6 @@ export default function SalaryAlertsCard({ ownerId }: SalaryAlertsCardProps) {
 
   const fetchDueSalaries = async () => {
     try {
-      // Get all shops for this owner
       const { data: shops } = await supabase
         .from("shops")
         .select("id, name")
@@ -41,7 +40,6 @@ export default function SalaryAlertsCard({ ownerId }: SalaryAlertsCardProps) {
       const shopIds = shops.map((s) => s.id);
       const shopMap = Object.fromEntries(shops.map((s) => [s.id, s.name]));
 
-      // Get staff with salary_pay_day set
       const { data: staffData } = await supabase
         .from("staff")
         .select("id, name, role, salary_amount, salary_pay_day, shop_id")
@@ -57,36 +55,32 @@ export default function SalaryAlertsCard({ ownerId }: SalaryAlertsCardProps) {
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
 
-      // Check which staff are due (pay day is today or has passed this month)
-      const staffDue: StaffSalaryDue[] = [];
+      // Filter staff whose pay day has passed
+      const eligibleStaff = staffData.filter(s => s.salary_pay_day && currentDay >= s.salary_pay_day);
+      if (eligibleStaff.length === 0) return;
 
-      for (const s of staffData) {
-        if (!s.salary_pay_day) continue;
-        
-        // Check if salary_pay_day has passed or is today
-        if (currentDay >= s.salary_pay_day) {
-          // Check if already paid this month
-          const periodStart = new Date(currentYear, currentMonth, 1).toISOString().split('T')[0];
-          const periodEnd = new Date(currentYear, currentMonth + 1, 0).toISOString().split('T')[0];
+      // Batch query: get all salary payments for this month for all eligible staff
+      const periodStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const periodEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-          const { data: payments } = await supabase
-            .from("salary_payments")
-            .select("id")
-            .eq("staff_id", s.id)
-            .gte("payment_date", periodStart)
-            .lte("payment_date", periodEnd)
-            .limit(1);
+      const { data: payments } = await supabase
+        .from("salary_payments")
+        .select("staff_id")
+        .in("staff_id", eligibleStaff.map(s => s.id))
+        .gte("payment_date", periodStart)
+        .lte("payment_date", periodEnd);
 
-          if (!payments || payments.length === 0) {
-            staffDue.push({
-              ...s,
-              salary_amount: s.salary_amount || 0,
-              salary_pay_day: s.salary_pay_day,
-              shop_name: shopMap[s.shop_id] || "",
-            });
-          }
-        }
-      }
+      const paidStaffIds = new Set((payments || []).map(p => p.staff_id));
+
+      const staffDue: StaffSalaryDue[] = eligibleStaff
+        .filter(s => !paidStaffIds.has(s.id))
+        .map(s => ({
+          ...s,
+          salary_amount: s.salary_amount || 0,
+          salary_pay_day: s.salary_pay_day!,
+          shop_name: shopMap[s.shop_id] || "",
+        }));
 
       setDueStaff(staffDue);
     } catch (error) {

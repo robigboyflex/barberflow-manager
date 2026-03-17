@@ -147,6 +147,7 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
   useEffect(() => {
     fetchActivities(false, selectedDate);
 
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel("activities-realtime")
       .on(
@@ -157,12 +158,14 @@ export default function ActivityFeed({ ownerId, shopId, limit = 20 }: ActivityFe
           table: "activities",
         },
         () => {
-          fetchActivities(false, selectedDate);
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => fetchActivities(false, selectedDate), 500);
         }
       )
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [ownerId, shopId, limit, selectedDate]);
