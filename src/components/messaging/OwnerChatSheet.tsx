@@ -37,7 +37,7 @@ export default function OwnerChatSheet({ shopId, shopName, ownerId, ownerName }:
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isSending, setIsSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollEndRef = useRef<HTMLDivElement>(null);
 
   const fetchMessages = async () => {
     const { data, error } = await supabase
