@@ -147,7 +147,7 @@ export default function CashierChatSheet() {
           <SheetTitle className="font-display text-lg">Chat with Owner</SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.length === 0 ? (
               <div className="text-center py-12">
