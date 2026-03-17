@@ -17,4 +17,26 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // Code splitting for better caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom", "react-router-dom"],
+          supabase: ["@supabase/supabase-js"],
+          ui: ["@radix-ui/react-dialog", "@radix-ui/react-popover", "@radix-ui/react-select"],
+          motion: ["framer-motion"],
+          query: ["@tanstack/react-query"],
+        },
+      },
+    },
+    // Smaller chunk warnings
+    chunkSizeWarningLimit: 600,
+    // CSS code splitting
+    cssCodeSplit: true,
+    // Minify
+    minify: "esbuild",
+    // Target modern browsers
+    target: "es2020",
+  },
 }));

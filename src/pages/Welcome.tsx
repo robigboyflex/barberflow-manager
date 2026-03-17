@@ -32,7 +32,7 @@ export default function Welcome() {
         transition={{ type: "spring", duration: 0.6 }}
         className="relative z-10 w-32 h-32 rounded-full overflow-hidden shadow-xl shadow-primary/30 mb-8"
       >
-        <img src={iconicBarberLogo} alt="Iconic Barber Logo" className="w-full h-full object-cover" />
+        <img src={iconicBarberLogo} alt="Iconic Barber Logo" className="w-full h-full object-cover" loading="eager" decoding="async" />
       </motion.div>
 
       {/* Title */}
