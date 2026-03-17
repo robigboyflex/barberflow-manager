@@ -632,7 +632,7 @@ export default function CashierPortal() {
               className="bg-card rounded-2xl p-6 max-w-sm w-full border border-border shadow-2xl text-center space-y-4"
             >
               <Clock className="w-12 h-12 text-warning mx-auto" />
-              <h3 className="font-display text-xl text-foreground">It's past 2:00 AM</h3>
+              <h3 className="font-display text-xl text-foreground">It's past 3:00 AM</h3>
               <p className="text-sm text-muted-foreground">
                 Would you like to clock out? You will be automatically clocked out in 30 seconds.
               </p>
