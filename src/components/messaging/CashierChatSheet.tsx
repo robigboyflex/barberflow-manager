@@ -170,6 +170,7 @@ export default function CashierChatSheet() {
                 />
               ))
             )}
+            <div ref={scrollEndRef} />
           </div>
         </ScrollArea>
 
