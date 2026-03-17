@@ -65,13 +65,13 @@ export default function CashierPortal() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showAutoClockOutPrompt, setShowAutoClockOutPrompt] = useState(false);
 
-  // 2AM auto clock-out check
+  // 3AM auto clock-out check
   useEffect(() => {
     if (!isClockedIn) return;
     const checkAutoClockOut = () => {
       const now = new Date();
       const hour = now.getHours();
-      if (hour >= 2 && hour < 5) {
+      if (hour >= 3 && hour < 6) {
         setShowAutoClockOutPrompt(true);
       }
     };
@@ -86,10 +86,22 @@ export default function CashierPortal() {
     const timeout = setTimeout(() => {
       handleClockOut();
       setShowAutoClockOutPrompt(false);
-      toast.info("You have been automatically clocked out (past 2:00 AM)");
+      toast.info("You have been automatically clocked out (past 3:00 AM)");
     }, 30000);
     return () => clearTimeout(timeout);
   }, [showAutoClockOutPrompt, isClockedIn]);
+
+  // Detect stale shift on mount (shift from previous day)
+  useEffect(() => {
+    if (!isClockedIn || !currentShiftStart) return;
+    const shiftDate = new Date(currentShiftStart);
+    const today = new Date();
+    // If shift started on a previous calendar day and it's past 3 AM, auto close
+    if (shiftDate.toDateString() !== today.toDateString() && today.getHours() >= 3) {
+      toast.warning("Your previous shift was not closed. Closing it now...");
+      handleClockOut();
+    }
+  }, [isClockedIn, currentShiftStart]);
 
   useEffect(() => {
     if (!isAuthenticated || !staff) {
@@ -620,7 +632,7 @@ export default function CashierPortal() {
               className="bg-card rounded-2xl p-6 max-w-sm w-full border border-border shadow-2xl text-center space-y-4"
             >
               <Clock className="w-12 h-12 text-warning mx-auto" />
-              <h3 className="font-display text-xl text-foreground">It's past 2:00 AM</h3>
+              <h3 className="font-display text-xl text-foreground">It's past 3:00 AM</h3>
               <p className="text-sm text-muted-foreground">
                 Would you like to clock out? You will be automatically clocked out in 30 seconds.
               </p>

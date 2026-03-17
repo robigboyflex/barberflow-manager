@@ -786,6 +786,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_clock_out_stale_shifts: { Args: never; Returns: Json }
       cashier_record_payment: {
         Args: {
           p_barber_id: string
