@@ -557,6 +557,9 @@ export default function CashierPortal() {
             </div>
           </motion.div>
 
+          {/* Previous Day Revenue */}
+          <PreviousDayRevenue />
+
           {/* Recent Activity */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
