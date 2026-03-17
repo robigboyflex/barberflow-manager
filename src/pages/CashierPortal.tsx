@@ -179,12 +179,10 @@ export default function CashierPortal() {
       if (cutsError) throw cutsError;
 
       const confirmedCuts = allShopCuts?.filter((c: any) => c.status === 'confirmed') || [];
-      // myServicesCount = cuts confirmed by this cashier specifically
-      const myCuts = confirmedCuts.filter((c: any) => c.barber_id === staff.id || true); // all confirmed are "my services" since cashier recorded them
       const myServicesCount = confirmedCuts.length;
       const myEarnings = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
       const shopServicesCount = confirmedCuts.length;
-      const shopRevenue = confirmedCuts.reduce((sum: number, c: any) => sum + Number(c.price), 0);
+      const shopRevenue = myEarnings;
 
       // Fetch today's expenses via RPC (direct table query blocked by RLS for staff)
       const { data: expensesData } = await supabase.rpc('get_shop_expenses_for_cashier', {
