@@ -36,6 +36,7 @@ import QRCodeGenerator from "@/components/QRCodeGenerator";
 import OwnerChatSheet from "@/components/messaging/OwnerChatSheet";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currency";
+import BarberSalarySheet from "@/components/BarberSalarySheet";
 
 interface Shop {
   id: string;
@@ -86,6 +87,7 @@ export default function ShopDetail() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"staff" | "services">("staff");
+  const [showSalarySheet, setShowSalarySheet] = useState(false);
 
   useEffect(() => {
     if (shopId) {
