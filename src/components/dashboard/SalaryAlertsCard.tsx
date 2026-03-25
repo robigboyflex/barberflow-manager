@@ -1,134 +1,161 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { AlertCircle, Check, DollarSign } from "lucide-react";
+import { AlertCircle, Check, DollarSign, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/currency";
+import { getSalaryPeriods, periodToDateRange } from "@/lib/salaryPeriod";
 
-interface StaffSalaryDue {
+interface BarberDue {
   id: string;
   name: string;
-  role: string;
-  salary_amount: number;
-  salary_pay_day: number;
-  shop_id: string;
-  shop_name: string;
+  totalRevenue: number;
+  calculatedSalary: number;
+  totalAdvances: number;
+  netPayable: number;
 }
 
 interface SalaryAlertsCardProps {
-  ownerId: string;
+  ownerId?: string;
+  shopId?: string;
+  /** If provided, renders in cashier mode (no mark-paid) */
+  cashierMode?: boolean;
 }
 
-export default function SalaryAlertsCard({ ownerId }: SalaryAlertsCardProps) {
-  const [dueStaff, setDueStaff] = useState<StaffSalaryDue[]>([]);
+export default function SalaryAlertsCard({ ownerId, shopId, cashierMode }: SalaryAlertsCardProps) {
+  const [dueBarbers, setDueBarbers] = useState<BarberDue[]>([]);
   const [payingId, setPayingId] = useState<string | null>(null);
+  const [periodLabel, setPeriodLabel] = useState("");
+  const [resolvedShopId, setResolvedShopId] = useState<string | null>(shopId || null);
+
+  const { current } = getSalaryPeriods();
 
   useEffect(() => {
+    if (!current.isDue) return;
     fetchDueSalaries();
-  }, [ownerId]);
+  }, [ownerId, shopId]);
 
   const fetchDueSalaries = async () => {
     try {
-      const { data: shops } = await supabase
-        .from("shops")
-        .select("id, name")
-        .eq("owner_id", ownerId);
+      let shopIds: string[];
+      if (shopId) {
+        shopIds = [shopId];
+      } else if (ownerId) {
+        const { data: shops } = await supabase
+          .from("shops")
+          .select("id")
+          .eq("owner_id", ownerId);
+        if (!shops?.length) return;
+        shopIds = shops.map((s) => s.id);
+      } else {
+        return;
+      }
 
-      if (!shops || shops.length === 0) return;
+      const { startDate, endDate } = periodToDateRange(current);
+      setPeriodLabel(current.label);
 
-      const shopIds = shops.map((s) => s.id);
-      const shopMap = Object.fromEntries(shops.map((s) => [s.id, s.name]));
-
+      // Get barbers
       const { data: staffData } = await supabase
         .from("staff")
-        .select("id, name, role, salary_amount, salary_pay_day, shop_id")
+        .select("id, name, shop_id")
         .in("shop_id", shopIds)
-        .eq("is_active", true)
-        .not("salary_pay_day", "is", null)
-        .gt("salary_amount", 0);
+        .eq("role", "barber")
+        .eq("is_active", true);
 
-      if (!staffData || staffData.length === 0) return;
+      if (!staffData?.length) return;
 
-      const today = new Date();
-      const currentDay = today.getDate();
-      const currentMonth = today.getMonth();
-      const currentYear = today.getFullYear();
+      const barberIds = staffData.map((b) => b.id);
 
-      // Filter staff whose pay day has passed
-      const eligibleStaff = staffData.filter(s => s.salary_pay_day && currentDay >= s.salary_pay_day);
-      if (eligibleStaff.length === 0) return;
+      const [cutsRes, advRes, payRes] = await Promise.all([
+        supabase
+          .from("cuts")
+          .select("barber_id, price")
+          .in("shop_id", shopIds)
+          .eq("status", "confirmed")
+          .in("barber_id", barberIds)
+          .gte("confirmed_at", `${startDate}T00:00:00`)
+          .lte("confirmed_at", `${endDate}T23:59:59`),
+        supabase
+          .from("salary_advances")
+          .select("staff_id, amount")
+          .in("shop_id", shopIds)
+          .in("staff_id", barberIds)
+          .gte("created_at", `${startDate}T00:00:00`)
+          .lte("created_at", `${endDate}T23:59:59`),
+        supabase
+          .from("salary_payments")
+          .select("staff_id")
+          .in("shop_id", shopIds)
+          .in("staff_id", barberIds)
+          .gte("period_start", startDate)
+          .lte("period_end", endDate),
+      ]);
 
-      // Batch query: get all salary payments for this month for all eligible staff
-      const periodStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`;
-      const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-      const periodEnd = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      const revenueMap: Record<string, number> = {};
+      const advanceMap: Record<string, number> = {};
+      const paidSet = new Set<string>();
 
-      const { data: payments } = await supabase
-        .from("salary_payments")
-        .select("staff_id")
-        .in("staff_id", eligibleStaff.map(s => s.id))
-        .gte("payment_date", periodStart)
-        .lte("payment_date", periodEnd);
+      (cutsRes.data || []).forEach((c) => {
+        revenueMap[c.barber_id] = (revenueMap[c.barber_id] || 0) + Number(c.price);
+      });
+      (advRes.data || []).forEach((a) => {
+        advanceMap[a.staff_id] = (advanceMap[a.staff_id] || 0) + Number(a.amount);
+      });
+      (payRes.data || []).forEach((p) => paidSet.add(p.staff_id));
 
-      const paidStaffIds = new Set((payments || []).map(p => p.staff_id));
+      const due: BarberDue[] = staffData
+        .filter((b) => !paidSet.has(b.id))
+        .map((b) => {
+          const totalRevenue = revenueMap[b.id] || 0;
+          const calculatedSalary = totalRevenue / 3;
+          const totalAdvances = advanceMap[b.id] || 0;
+          return {
+            id: b.id,
+            name: b.name,
+            totalRevenue,
+            calculatedSalary,
+            totalAdvances,
+            netPayable: Math.max(0, calculatedSalary - totalAdvances),
+          };
+        })
+        .filter((b) => b.totalRevenue > 0);
 
-      const staffDue: StaffSalaryDue[] = eligibleStaff
-        .filter(s => !paidStaffIds.has(s.id))
-        .map(s => ({
-          ...s,
-          salary_amount: s.salary_amount || 0,
-          salary_pay_day: s.salary_pay_day!,
-          shop_name: shopMap[s.shop_id] || "",
-        }));
+      // Store first shop for payment recording
+      if (staffData.length > 0 && !resolvedShopId) {
+        setResolvedShopId(staffData[0].shop_id);
+      }
 
-      setDueStaff(staffDue);
+      setDueBarbers(due);
     } catch (error) {
       console.error("Error fetching salary alerts:", error);
     }
   };
 
-  const handleMarkPaid = async (staff: StaffSalaryDue) => {
-    setPayingId(staff.id);
+  const handleMarkPaid = async (barber: BarberDue) => {
+    if (cashierMode) return;
+    setPayingId(barber.id);
     try {
-      const today = new Date();
-      const periodStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-      const periodEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+      const { startDate, endDate } = periodToDateRange(current);
+      const today = new Date().toISOString().split("T")[0];
 
-      // Record salary payment
-      const { error: paymentError } = await supabase
-        .from("salary_payments")
-        .insert({
-          staff_id: staff.id,
-          shop_id: staff.shop_id,
-          amount: staff.salary_amount,
-          payment_date: today.toISOString().split('T')[0],
-          period_start: periodStart,
-          period_end: periodEnd,
-        });
+      const targetShopId = shopId || resolvedShopId;
+      if (!targetShopId) throw new Error("Shop not found");
 
-      if (paymentError) throw paymentError;
+      const { error } = await supabase.from("salary_payments").insert({
+        staff_id: barber.id,
+        shop_id: targetShopId,
+        amount: barber.netPayable,
+        payment_date: today,
+        period_start: startDate,
+        period_end: endDate,
+        notes: `Period: ${current.label}`,
+      });
 
-      // Also record as expense
-      // We need to use the RPC but it requires a cashier - use direct insert with owner
-      // Expenses table allows owner via RLS
-      const { error: expenseError } = await supabase
-        .from("expenses")
-        .insert({
-          shop_id: staff.shop_id,
-          recorded_by: staff.id, // Attribute to the staff member
-          category: "other" as const,
-          description: `Salary payment - ${staff.name} (${staff.role})`,
-          amount: staff.salary_amount,
-        });
+      if (error) throw error;
 
-      // Don't fail if expense insert fails due to RLS (recorded_by must be cashier)
-      if (expenseError) {
-        console.warn("Could not auto-record salary as expense:", expenseError.message);
-      }
-
-      toast.success(`${staff.name}'s salary marked as paid`);
-      setDueStaff((prev) => prev.filter((s) => s.id !== staff.id));
+      toast.success(`${barber.name}'s salary marked as paid`);
+      setDueBarbers((prev) => prev.filter((b) => b.id !== barber.id));
     } catch (error: any) {
       console.error("Error marking salary paid:", error);
       toast.error(error.message || "Failed to record payment");
@@ -137,7 +164,7 @@ export default function SalaryAlertsCard({ ownerId }: SalaryAlertsCardProps) {
     }
   };
 
-  if (dueStaff.length === 0) return null;
+  if (!current.isDue || dueBarbers.length === 0) return null;
 
   return (
     <motion.div
@@ -147,34 +174,50 @@ export default function SalaryAlertsCard({ ownerId }: SalaryAlertsCardProps) {
     >
       <div className="flex items-center gap-2">
         <AlertCircle className="w-5 h-5 text-warning" />
-        <h3 className="font-display text-lg text-foreground">Salary Due</h3>
+        <h3 className="font-display text-lg text-foreground">Barber Salary Due</h3>
       </div>
+      <p className="text-xs text-muted-foreground flex items-center gap-1">
+        <Calendar className="w-3 h-3" />
+        Period: {periodLabel}
+      </p>
 
       <div className="space-y-2">
-        {dueStaff.map((staff) => (
+        {dueBarbers.map((barber) => (
           <div
-            key={staff.id}
-            className="flex items-center justify-between bg-card rounded-xl p-3 border border-border"
+            key={barber.id}
+            className="bg-card rounded-xl p-3 border border-border space-y-2"
           >
-            <div>
-              <p className="text-sm font-medium text-foreground">{staff.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">
-                {staff.role} • {staff.shop_name} • Due day {staff.salary_pay_day}
-              </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">{barber.name}</p>
+              {!cashierMode && (
+                <Button
+                  size="sm"
+                  onClick={() => handleMarkPaid(barber)}
+                  disabled={payingId === barber.id || barber.netPayable <= 0}
+                  className="h-7 rounded-lg gap-1 bg-success hover:bg-success/90 text-success-foreground text-xs"
+                >
+                  <Check className="w-3 h-3" />
+                  {payingId === barber.id ? "..." : "Paid"}
+                </Button>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-display text-foreground">
-                {formatCurrency(staff.salary_amount)}
-              </span>
-              <Button
-                size="sm"
-                onClick={() => handleMarkPaid(staff)}
-                disabled={payingId === staff.id}
-                className="h-8 rounded-lg gap-1 bg-success hover:bg-success/90 text-success-foreground"
-              >
-                <Check className="w-3.5 h-3.5" />
-                {payingId === staff.id ? "..." : "Paid"}
-              </Button>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Revenue</span>
+                <span className="text-foreground font-medium">{formatCurrency(barber.totalRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Salary (⅓)</span>
+                <span className="text-success font-medium">{formatCurrency(barber.calculatedSalary)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Advances</span>
+                <span className="text-warning font-medium">{formatCurrency(barber.totalAdvances)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Net Due</span>
+                <span className="text-foreground font-display">{formatCurrency(barber.netPayable)}</span>
+              </div>
             </div>
           </div>
         ))}
