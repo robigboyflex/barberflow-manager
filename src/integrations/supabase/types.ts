@@ -490,6 +490,58 @@ export type Database = {
         }
         Relationships: []
       }
+      salary_advances: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          recorded_by: string
+          shop_id: string
+          staff_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by: string
+          shop_id: string
+          staff_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          recorded_by?: string
+          shop_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_advances_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_advances_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_advances_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_payments: {
         Row: {
           amount: number
@@ -1038,6 +1090,17 @@ export type Database = {
             }
             Returns: string
           }
+      record_salary_advance: {
+        Args: {
+          p_amount: number
+          p_barber_id: string
+          p_notes?: string
+          p_session_token?: string
+          p_shop_id: string
+          p_staff_id: string
+        }
+        Returns: string
+      }
       send_staff_message: {
         Args: {
           p_content: string
