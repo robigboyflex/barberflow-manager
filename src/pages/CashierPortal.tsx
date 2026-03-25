@@ -19,6 +19,7 @@ import CloseShiftModal from "@/components/cashier/CloseShiftModal";
 import AddExpenseModal from "@/components/cashier/AddExpenseModal";
 import PreviousDayRevenue from "@/components/cashier/PreviousDayRevenue";
 import CashierChatSheet from "@/components/messaging/CashierChatSheet";
+import BarberSalarySheet from "@/components/BarberSalarySheet";
 import LiveClock from "@/components/LiveClock";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 import { formatCurrency } from "@/lib/currency";
@@ -66,6 +67,7 @@ export default function CashierPortal() {
   const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showAutoClockOutPrompt, setShowAutoClockOutPrompt] = useState(false);
+  const [showSalarySheet, setShowSalarySheet] = useState(false);
 
   // 3AM auto clock-out check
   useEffect(() => {
@@ -496,6 +498,22 @@ export default function CashierPortal() {
             >
               <TrendingDown className="w-5 h-5" />
               Add Expense
+            </Button>
+          </motion.div>
+
+          {/* Barber Salary Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.19 }}
+          >
+            <Button
+              onClick={() => setShowSalarySheet(true)}
+              variant="outline"
+              className="w-full h-14 rounded-xl text-lg font-medium gap-2 border-2 border-primary/30 text-primary hover:bg-primary/10"
+            >
+              <DollarSign className="w-5 h-5" />
+              Barber Salary
             </Button>
           </motion.div>
 
