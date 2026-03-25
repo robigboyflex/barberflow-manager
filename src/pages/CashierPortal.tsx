@@ -641,6 +641,16 @@ export default function CashierPortal() {
           onSuccess={fetchData}
         />
 
+        {/* Barber Salary Sheet */}
+        <BarberSalarySheet
+          isOpen={showSalarySheet}
+          onClose={() => setShowSalarySheet(false)}
+          shopId={staff.shop_id}
+          cashierId={staff.id}
+          sessionToken={getSessionToken() || undefined}
+          mode="cashier"
+        />
+
         {/* Close Shift Modal */}
         {currentShiftId && currentShiftStart && (
           <CloseShiftModal
