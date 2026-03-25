@@ -36,6 +36,7 @@ import QRCodeGenerator from "@/components/QRCodeGenerator";
 import OwnerChatSheet from "@/components/messaging/OwnerChatSheet";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currency";
+import BarberSalarySheet from "@/components/BarberSalarySheet";
 
 interface Shop {
   id: string;
@@ -86,6 +87,7 @@ export default function ShopDetail() {
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"staff" | "services">("staff");
+  const [showSalarySheet, setShowSalarySheet] = useState(false);
 
   useEffect(() => {
     if (shopId) {
@@ -257,6 +259,16 @@ export default function ShopDetail() {
             <p className="text-xs text-muted-foreground">Services</p>
           </motion.div>
         </div>
+
+        {/* Barber Salary Button */}
+        <Button
+          onClick={() => setShowSalarySheet(true)}
+          variant="outline"
+          className="w-full h-12 rounded-xl text-base font-medium gap-2 border-2 border-primary/30 text-primary hover:bg-primary/10"
+        >
+          <DollarSign className="w-5 h-5" />
+          Barber Salary
+        </Button>
 
         {/* Tabs */}
         <div className="flex gap-2 bg-secondary/50 p-1 rounded-2xl">
@@ -437,6 +449,16 @@ export default function ShopDetail() {
           onSuccess={fetchShopData}
           shopId={shop.id}
           shopName={shop.name}
+        />
+      )}
+
+      {/* Barber Salary Sheet */}
+      {shopId && (
+        <BarberSalarySheet
+          isOpen={showSalarySheet}
+          onClose={() => setShowSalarySheet(false)}
+          shopId={shopId}
+          mode="owner"
         />
       )}
     </AnimatedPage>
