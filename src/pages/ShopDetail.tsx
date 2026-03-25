@@ -260,6 +260,16 @@ export default function ShopDetail() {
           </motion.div>
         </div>
 
+        {/* Barber Salary Button */}
+        <Button
+          onClick={() => setShowSalarySheet(true)}
+          variant="outline"
+          className="w-full h-12 rounded-xl text-base font-medium gap-2 border-2 border-primary/30 text-primary hover:bg-primary/10"
+        >
+          <DollarSign className="w-5 h-5" />
+          Barber Salary
+        </Button>
+
         {/* Tabs */}
         <div className="flex gap-2 bg-secondary/50 p-1 rounded-2xl">
           <button
