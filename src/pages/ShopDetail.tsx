@@ -451,6 +451,16 @@ export default function ShopDetail() {
           shopName={shop.name}
         />
       )}
+
+      {/* Barber Salary Sheet */}
+      {shopId && (
+        <BarberSalarySheet
+          isOpen={showSalarySheet}
+          onClose={() => setShowSalarySheet(false)}
+          shopId={shopId}
+          mode="owner"
+        />
+      )}
     </AnimatedPage>
   );
 }
