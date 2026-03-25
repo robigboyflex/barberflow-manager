@@ -20,6 +20,7 @@ import AddExpenseModal from "@/components/cashier/AddExpenseModal";
 import PreviousDayRevenue from "@/components/cashier/PreviousDayRevenue";
 import CashierChatSheet from "@/components/messaging/CashierChatSheet";
 import BarberSalarySheet from "@/components/BarberSalarySheet";
+import SalaryAlertsCard from "@/components/dashboard/SalaryAlertsCard";
 import LiveClock from "@/components/LiveClock";
 import { getUserFriendlyError, isSessionExpiredError, logError } from "@/lib/errorHandler";
 import { formatCurrency } from "@/lib/currency";
@@ -587,6 +588,9 @@ export default function CashierPortal() {
               )}
             </div>
           </motion.div>
+
+          {/* Salary Due Alert */}
+          <SalaryAlertsCard shopId={staff.shop_id} cashierMode />
 
           {/* Previous Day Revenue */}
           <PreviousDayRevenue />

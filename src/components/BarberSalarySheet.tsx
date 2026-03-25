@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, TrendingUp, Minus, Plus, X, Loader2 } from "lucide-react";
+import { DollarSign, Minus, Loader2, Calendar, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/currency";
+import { getSalaryPeriods, periodToDateRange, SalaryPeriod } from "@/lib/salaryPeriod";
 
 interface BarberSalaryData {
   id: string;
@@ -27,10 +28,8 @@ interface BarberSalarySheetProps {
   isOpen: boolean;
   onClose: () => void;
   shopId: string;
-  /** If provided, enables cashier advance recording */
   cashierId?: string;
   sessionToken?: string;
-  /** "owner" uses supabase auth, "cashier" uses RPC */
   mode: "owner" | "cashier";
 }
 
@@ -48,30 +47,23 @@ export default function BarberSalarySheet({
   const [advanceAmount, setAdvanceAmount] = useState("");
   const [advanceNotes, setAdvanceNotes] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<"month" | "week">("month");
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [selectedView, setSelectedView] = useState<"current" | "previous">("current");
+
+  const { current, previous } = getSalaryPeriods();
+  const activePeriod: SalaryPeriod = selectedView === "current" ? current : previous!;
 
   useEffect(() => {
     if (isOpen) {
       fetchBarberSalaries();
     }
-  }, [isOpen, shopId, selectedPeriod]);
+  }, [isOpen, shopId, selectedView]);
 
   const fetchBarberSalaries = async () => {
     setIsLoading(true);
     try {
-      // Calculate date range
-      const now = new Date();
-      let startDate: string;
-      if (selectedPeriod === "month") {
-        startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-      } else {
-        const weekAgo = new Date(now);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        startDate = weekAgo.toISOString().split("T")[0];
-      }
-      const endDate = now.toISOString().split("T")[0];
+      const { startDate, endDate } = periodToDateRange(activePeriod);
 
-      // Get barbers for this shop
       const { data: staffData } = await supabase
         .from("staff")
         .select("id, name")
@@ -87,58 +79,97 @@ export default function BarberSalarySheet({
 
       const barberIds = staffData.map((b) => b.id);
 
-      // Get confirmed cuts for these barbers in the period
-      const { data: cutsData } = await supabase
-        .from("cuts")
-        .select("barber_id, price")
-        .eq("shop_id", shopId)
-        .eq("status", "confirmed")
-        .in("barber_id", barberIds)
-        .gte("confirmed_at", `${startDate}T00:00:00`)
-        .lte("confirmed_at", `${endDate}T23:59:59`);
+      const [cutsResult, advancesResult, paymentsResult] = await Promise.all([
+        supabase
+          .from("cuts")
+          .select("barber_id, price")
+          .eq("shop_id", shopId)
+          .eq("status", "confirmed")
+          .in("barber_id", barberIds)
+          .gte("confirmed_at", `${startDate}T00:00:00`)
+          .lte("confirmed_at", `${endDate}T23:59:59`),
+        supabase
+          .from("salary_advances")
+          .select("staff_id, amount")
+          .eq("shop_id", shopId)
+          .in("staff_id", barberIds)
+          .gte("created_at", `${startDate}T00:00:00`)
+          .lte("created_at", `${endDate}T23:59:59`),
+        supabase
+          .from("salary_payments")
+          .select("staff_id")
+          .eq("shop_id", shopId)
+          .in("staff_id", barberIds)
+          .gte("period_start", startDate)
+          .lte("period_end", endDate),
+      ]);
 
-      // Get advances for these barbers in the period
-      const { data: advancesData } = await supabase
-        .from("salary_advances")
-        .select("staff_id, amount")
-        .eq("shop_id", shopId)
-        .in("staff_id", barberIds)
-        .gte("created_at", `${startDate}T00:00:00`)
-        .lte("created_at", `${endDate}T23:59:59`);
-
-      // Aggregate
       const revenueMap: Record<string, number> = {};
       const advanceMap: Record<string, number> = {};
+      const paidSet = new Set<string>();
 
-      (cutsData || []).forEach((cut) => {
+      (cutsResult.data || []).forEach((cut) => {
         revenueMap[cut.barber_id] = (revenueMap[cut.barber_id] || 0) + Number(cut.price);
       });
 
-      (advancesData || []).forEach((adv) => {
+      (advancesResult.data || []).forEach((adv) => {
         advanceMap[adv.staff_id] = (advanceMap[adv.staff_id] || 0) + Number(adv.amount);
       });
 
-      const result: BarberSalaryData[] = staffData.map((b) => {
-        const totalRevenue = revenueMap[b.id] || 0;
-        const calculatedSalary = totalRevenue / 3;
-        const totalAdvances = advanceMap[b.id] || 0;
-        return {
-          id: b.id,
-          name: b.name,
-          totalRevenue,
-          calculatedSalary,
-          totalAdvances,
-          netPayable: Math.max(0, calculatedSalary - totalAdvances),
-        };
+      (paymentsResult.data || []).forEach((p) => {
+        paidSet.add(p.staff_id);
       });
 
-      // Sort by revenue descending
+      const result: BarberSalaryData[] = staffData
+        .filter((b) => !paidSet.has(b.id))
+        .map((b) => {
+          const totalRevenue = revenueMap[b.id] || 0;
+          const calculatedSalary = totalRevenue / 3;
+          const totalAdvances = advanceMap[b.id] || 0;
+          return {
+            id: b.id,
+            name: b.name,
+            totalRevenue,
+            calculatedSalary,
+            totalAdvances,
+            netPayable: Math.max(0, calculatedSalary - totalAdvances),
+          };
+        });
+
       result.sort((a, b) => b.totalRevenue - a.totalRevenue);
       setBarbers(result);
     } catch (error) {
       console.error("Error fetching barber salaries:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleMarkPaid = async (barber: BarberSalaryData) => {
+    setPayingId(barber.id);
+    try {
+      const { startDate, endDate } = periodToDateRange(activePeriod);
+      const today = new Date().toISOString().split("T")[0];
+
+      const { error } = await supabase.from("salary_payments").insert({
+        staff_id: barber.id,
+        shop_id: shopId,
+        amount: barber.netPayable,
+        payment_date: today,
+        period_start: startDate,
+        period_end: endDate,
+        notes: `Period: ${activePeriod.label}`,
+      });
+
+      if (error) throw error;
+
+      toast.success(`${barber.name}'s salary marked as paid`);
+      setBarbers((prev) => prev.filter((b) => b.id !== barber.id));
+    } catch (error: any) {
+      console.error("Error marking salary paid:", error);
+      toast.error(error.message || "Failed to record payment");
+    } finally {
+      setPayingId(null);
     }
   };
 
@@ -196,27 +227,34 @@ export default function BarberSalarySheet({
               <DollarSign className="w-5 h-5 text-primary" />
               Barber Salary
             </SheetTitle>
-            <SheetDescription>
-              Revenue-based salary (⅓ of generated revenue)
+            <SheetDescription className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5" />
+              Period: {activePeriod.label}
+              {activePeriod.isDue && (
+                <span className="ml-1 text-xs px-1.5 py-0.5 rounded-full bg-warning/20 text-warning font-medium">
+                  Due
+                </span>
+              )}
             </SheetDescription>
-            {/* Period Toggle */}
             <div className="flex gap-2 mt-2">
               <Button
                 size="sm"
-                variant={selectedPeriod === "month" ? "default" : "outline"}
+                variant={selectedView === "current" ? "default" : "outline"}
                 className="rounded-full text-xs h-8"
-                onClick={() => setSelectedPeriod("month")}
+                onClick={() => setSelectedView("current")}
               >
-                This Month
+                Current Period
               </Button>
-              <Button
-                size="sm"
-                variant={selectedPeriod === "week" ? "default" : "outline"}
-                className="rounded-full text-xs h-8"
-                onClick={() => setSelectedPeriod("week")}
-              >
-                Last 7 Days
-              </Button>
+              {previous && (
+                <Button
+                  size="sm"
+                  variant={selectedView === "previous" ? "default" : "outline"}
+                  className="rounded-full text-xs h-8"
+                  onClick={() => setSelectedView("previous")}
+                >
+                  Previous Period
+                </Button>
+              )}
             </div>
           </SheetHeader>
 
@@ -228,13 +266,17 @@ export default function BarberSalarySheet({
             ) : barbers.length === 0 ? (
               <div className="text-center py-12">
                 <DollarSign className="w-10 h-10 mx-auto mb-2 text-muted-foreground/50" />
-                <p className="text-muted-foreground">No barbers found</p>
+                <p className="text-muted-foreground">
+                  {selectedView === "current"
+                    ? "All salaries paid or no barbers found"
+                    : "No unpaid salaries for the previous period"}
+                </p>
               </div>
             ) : (
               <>
                 {/* Grand Totals */}
                 <div className="rounded-2xl bg-gradient-gold p-4 text-primary-foreground">
-                  <p className="text-sm opacity-80 mb-1">Total Summary</p>
+                  <p className="text-sm opacity-80 mb-1">Period Summary</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <p className="text-xs opacity-70">Total Revenue</p>
@@ -265,19 +307,32 @@ export default function BarberSalarySheet({
                   >
                     <div className="flex items-center justify-between">
                       <h4 className="font-display text-foreground text-base">{barber.name}</h4>
-                      {mode === "cashier" && cashierId && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full text-xs h-7 gap-1 border-warning text-warning hover:bg-warning/10"
-                          onClick={() =>
-                            setAdvanceBarber(advanceBarber === barber.id ? null : barber.id)
-                          }
-                        >
-                          <Minus className="w-3 h-3" />
-                          Advance
-                        </Button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {mode === "cashier" && cashierId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="rounded-full text-xs h-7 gap-1 border-warning text-warning hover:bg-warning/10"
+                            onClick={() =>
+                              setAdvanceBarber(advanceBarber === barber.id ? null : barber.id)
+                            }
+                          >
+                            <Minus className="w-3 h-3" />
+                            Advance
+                          </Button>
+                        )}
+                        {activePeriod.isDue && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleMarkPaid(barber)}
+                            disabled={payingId === barber.id || barber.netPayable <= 0}
+                            className="rounded-full text-xs h-7 gap-1 bg-success hover:bg-success/90 text-success-foreground"
+                          >
+                            <Check className="w-3 h-3" />
+                            {payingId === barber.id ? "..." : "Paid"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
