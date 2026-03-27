@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { DollarSign, Minus, Loader2, Calendar, Check } from "lucide-react";
+import { DollarSign, Minus, Loader2, Calendar, Check, Scissors, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -377,6 +377,11 @@ export default function BarberSalarySheet({
                       </div>
                     </div>
 
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                      <Scissors className="w-3.5 h-3.5" />
+                      <span className="font-medium">{barber.totalCuts} total cuts</span>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
                         <p className="text-muted-foreground text-xs">Revenue Generated</p>
@@ -403,6 +408,26 @@ export default function BarberSalarySheet({
                         </p>
                       </div>
                     </div>
+
+                    {/* Per-Cashier Breakdown */}
+                    {barber.cashierBreakdown.length > 0 && (
+                      <div className="border-t border-border pt-2 mt-1">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+                          <Users className="w-3 h-3" />
+                          <span className="font-medium">Cuts by Cashier</span>
+                        </div>
+                        <div className="space-y-1">
+                          {barber.cashierBreakdown.map((cb) => (
+                            <div key={cb.cashierName} className="flex items-center justify-between text-xs">
+                              <span className="text-muted-foreground">{cb.cashierName}</span>
+                              <span className="text-foreground font-medium">
+                                {cb.cuts} cuts · {formatCurrency(cb.revenue)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Advance Form (inline) */}
                     {advanceBarber === barber.id && (
