@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Store, Users, TrendingUp, UserPlus } from "lucide-react";
+import { Store, Users, TrendingUp, UserPlus, DollarSign } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AnimatedPage from "@/components/AnimatedPage";
 import ShopCard, { AddShopButton } from "@/components/ShopCard";
@@ -10,6 +10,7 @@ import ShopsManagementSheet from "@/components/dashboard/ShopsManagementSheet";
 import StaffManagementSheet from "@/components/dashboard/StaffManagementSheet";
 import SalaryAlertsCard from "@/components/dashboard/SalaryAlertsCard";
 import BarberLeaderboard from "@/components/dashboard/BarberLeaderboard";
+import BarberSalarySheet from "@/components/BarberSalarySheet";
 import { useAuth } from "@/hooks/useAuth";
 import { useShops } from "@/hooks/useShops";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +23,7 @@ export default function Dashboard() {
   const [isAddShopOpen, setIsAddShopOpen] = useState(false);
   const [isShopsSheetOpen, setIsShopsSheetOpen] = useState(false);
   const [isStaffSheetOpen, setIsStaffSheetOpen] = useState(false);
+  const [salaryShopId, setSalaryShopId] = useState<string | null>(null);
   
   const { data: shops, isLoading, refetch } = useShops();
 
@@ -125,6 +127,39 @@ export default function Dashboard() {
             )}
           </motion.div>
         </motion.div>
+
+        {/* Barber Salary Button */}
+        {shops && shops.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <Button
+              variant="outline"
+              className="w-full rounded-2xl h-12 gap-2 border-primary/30 text-primary hover:bg-primary/5 font-display text-base"
+              onClick={() => setSalaryShopId(shops[0].id)}
+            >
+              <DollarSign className="w-5 h-5" />
+              Barber Salary
+            </Button>
+            {shops.length > 1 && (
+              <div className="flex gap-2 mt-2 flex-wrap">
+                {shops.map((shop) => (
+                  <Button
+                    key={shop.id}
+                    size="sm"
+                    variant="ghost"
+                    className="rounded-full text-xs"
+                    onClick={() => setSalaryShopId(shop.id)}
+                  >
+                    {shop.name}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Salary Alerts */}
         {user && (
@@ -242,6 +277,16 @@ export default function Dashboard() {
         shops={shops}
         isLoading={isLoading}
       />
+
+      {/* Barber Salary Sheet */}
+      {salaryShopId && (
+        <BarberSalarySheet
+          isOpen={!!salaryShopId}
+          onClose={() => setSalaryShopId(null)}
+          shopId={salaryShopId}
+          mode="owner"
+        />
+      )}
     </AnimatedPage>
   );
 }
