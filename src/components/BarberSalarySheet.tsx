@@ -15,13 +15,21 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/currency";
 import { getSalaryPeriods, periodToDateRange, SalaryPeriod } from "@/lib/salaryPeriod";
 
+interface CashierCutBreakdown {
+  cashierName: string;
+  cuts: number;
+  revenue: number;
+}
+
 interface BarberSalaryData {
   id: string;
   name: string;
   totalRevenue: number;
+  totalCuts: number;
   calculatedSalary: number;
   totalAdvances: number;
   netPayable: number;
+  cashierBreakdown: CashierCutBreakdown[];
 }
 
 interface BarberSalarySheetProps {
@@ -79,10 +87,21 @@ export default function BarberSalarySheet({
 
       const barberIds = staffData.map((b) => b.id);
 
+      // Fetch all cashiers for name lookup
+      const { data: cashierData } = await supabase
+        .from("staff")
+        .select("id, name")
+        .eq("shop_id", shopId)
+        .eq("role", "cashier")
+        .eq("is_active", true);
+
+      const cashierNameMap: Record<string, string> = {};
+      (cashierData || []).forEach((c) => { cashierNameMap[c.id] = c.name; });
+
       const [cutsResult, advancesResult, paymentsResult] = await Promise.all([
         supabase
           .from("cuts")
-          .select("barber_id, price")
+          .select("barber_id, price, confirmed_by")
           .eq("shop_id", shopId)
           .eq("status", "confirmed")
           .in("barber_id", barberIds)
@@ -105,11 +124,23 @@ export default function BarberSalarySheet({
       ]);
 
       const revenueMap: Record<string, number> = {};
+      const cutCountMap: Record<string, number> = {};
       const advanceMap: Record<string, number> = {};
       const paidSet = new Set<string>();
+      // barber_id -> cashier_id -> { cuts, revenue }
+      const cashierBreakdownMap: Record<string, Record<string, { cuts: number; revenue: number }>> = {};
 
       (cutsResult.data || []).forEach((cut) => {
         revenueMap[cut.barber_id] = (revenueMap[cut.barber_id] || 0) + Number(cut.price);
+        cutCountMap[cut.barber_id] = (cutCountMap[cut.barber_id] || 0) + 1;
+
+        const cashierId = cut.confirmed_by || "unknown";
+        if (!cashierBreakdownMap[cut.barber_id]) cashierBreakdownMap[cut.barber_id] = {};
+        if (!cashierBreakdownMap[cut.barber_id][cashierId]) {
+          cashierBreakdownMap[cut.barber_id][cashierId] = { cuts: 0, revenue: 0 };
+        }
+        cashierBreakdownMap[cut.barber_id][cashierId].cuts += 1;
+        cashierBreakdownMap[cut.barber_id][cashierId].revenue += Number(cut.price);
       });
 
       (advancesResult.data || []).forEach((adv) => {
@@ -124,15 +155,26 @@ export default function BarberSalarySheet({
         .filter((b) => !paidSet.has(b.id))
         .map((b) => {
           const totalRevenue = revenueMap[b.id] || 0;
+          const totalCuts = cutCountMap[b.id] || 0;
           const calculatedSalary = totalRevenue / 3;
           const totalAdvances = advanceMap[b.id] || 0;
+          const breakdown = cashierBreakdownMap[b.id] || {};
+          const cashierBreakdown: CashierCutBreakdown[] = Object.entries(breakdown)
+            .map(([cId, data]) => ({
+              cashierName: cashierNameMap[cId] || "Unknown",
+              cuts: data.cuts,
+              revenue: data.revenue,
+            }))
+            .sort((a, b) => b.cuts - a.cuts);
           return {
             id: b.id,
             name: b.name,
             totalRevenue,
+            totalCuts,
             calculatedSalary,
             totalAdvances,
             netPayable: Math.max(0, calculatedSalary - totalAdvances),
+            cashierBreakdown,
           };
         });
 
