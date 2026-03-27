@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,79 +13,97 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-const SESSION_REFRESH_BUFFER_MS = 30_000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const initializedRef = useRef(false);
+  const currentUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    let initialized = false;
 
     const applySession = (nextSession: Session | null) => {
       if (!isMounted) return;
+      const nextUserId = nextSession?.user?.id ?? null;
+      const prevUserId = currentUserIdRef.current;
+
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setLoading(false);
-    };
 
-    const initializeAuth = async () => {
-      try {
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        applySession(existingSession);
-      } catch {
-        applySession(null);
-      } finally {
-        initialized = true;
-      }
-    };
-
-    void initializeAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
-      // Only process auth state changes after initial load to prevent flicker
-      if (!initialized) return;
-      
-      // Clear all cached queries on sign-out or sign-in so stale data is never served
-      if (event === 'SIGNED_OUT') {
+      // Only clear/invalidate queries when the user actually changes
+      if (prevUserId && !nextUserId) {
+        // Signed out — clear all cached data
         queryClient.clear();
-      } else if (event === 'SIGNED_IN') {
-        queryClient.invalidateQueries();
+      } else if (nextUserId && prevUserId !== nextUserId) {
+        // Different user signed in — invalidate stale data (no immediate refetch storm)
+        queryClient.removeQueries();
       }
-      
-      applySession(newSession);
+
+      currentUserIdRef.current = nextUserId;
+    };
+
+    // 1. Set up listener FIRST (per Supabase docs)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (!initializedRef.current) {
+        // During init, only process the INITIAL_SESSION event
+        if (event === 'INITIAL_SESSION') {
+          applySession(newSession);
+          initializedRef.current = true;
+        }
+        return;
+      }
+
+      // After init, process sign-in/out/token refresh
+      if (event === 'SIGNED_OUT') {
+        applySession(null);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        applySession(newSession);
+      }
     });
+
+    // 2. Fallback: if INITIAL_SESSION never fires within 3s, manually fetch
+    const fallbackTimer = setTimeout(async () => {
+      if (!initializedRef.current && isMounted) {
+        try {
+          const { data: { session: s } } = await supabase.auth.getSession();
+          if (!initializedRef.current && isMounted) {
+            applySession(s);
+            initializedRef.current = true;
+          }
+        } catch {
+          if (!initializedRef.current && isMounted) {
+            applySession(null);
+            initializedRef.current = true;
+          }
+        }
+      }
+    }, 3000);
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
+      clearTimeout(fallbackTimer);
     };
-  }, []);
+  }, [queryClient]);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          full_name: fullName,
-        }
+        emailRedirectTo: `${window.location.origin}/`,
+        data: { full_name: fullName },
       }
     });
     return { data, error };
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return { data, error };
   };
 
